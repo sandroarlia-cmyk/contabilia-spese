@@ -1,0 +1,876 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Contabilità Spese</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<style>
+  :root{
+    --bg: #10233b;
+    --bg-2: #0c1c30;
+    --paper: #f7f4ec;
+    --paper-line: #d8d2c0;
+    --ink: #1c2a3a;
+    --ink-soft: #5a6a7a;
+    --green: #1b6e52;
+    --green-deep: #0e4a37;
+    --red: #b6402f;
+    --red-deep: #7c2a1e;
+    --gold: #b8902f;
+    --border: #cfc8b4;
+    --card-h1: 92px;
+    --card-h2: 128px;
+    font-family: "Inter", "Segoe UI", system-ui, sans-serif;
+  }
+  *{ box-sizing:border-box; }
+  html,body{
+    margin:0; padding:0; min-height:100%;
+    background: var(--bg);
+    color: var(--ink);
+  }
+  body{
+    padding: 18px;
+  }
+  h1,h2,h3{ font-family:"Fraunces","Georgia",serif; font-weight:600; margin:0; }
+
+  /* ---------- LOGIN ---------- */
+  #login-screen{
+    min-height: 80vh;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .login-box{
+    background: var(--paper);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 36px 32px;
+    width: 100%; max-width: 360px;
+    text-align:center;
+  }
+  .login-box h1{ font-size: 24px; color: var(--green-deep); margin-bottom: 4px; }
+  .login-box p.sub{ color: var(--ink-soft); font-size: 13px; margin: 0 0 20px; }
+  .login-box input{
+    width:100%; padding: 12px 14px; font-size: 15px;
+    border: 1px solid var(--border); border-radius: 6px;
+    background: #fff; color: var(--ink); margin-bottom: 12px;
+    font-family: inherit;
+  }
+  .login-box button{
+    width:100%; padding: 12px; font-size: 15px; font-weight:600;
+    border: none; border-radius: 6px; cursor:pointer;
+    background: var(--green-deep); color:#fff;
+    font-family: inherit;
+  }
+  .login-box button:hover{ background: var(--green); }
+  .login-err{ color: var(--red-deep); font-size: 13px; margin: 8px 0 0; min-height: 16px; }
+  .login-hint{ font-size: 12px; color: var(--ink-soft); margin-top: 14px; line-height:1.5; }
+
+  /* ---------- APP SHELL ---------- */
+  #app{ display:none; max-width: 1080px; margin: 0 auto; }
+  .topbar{
+    display:flex; align-items:center; justify-content:space-between;
+    margin-bottom: 18px; padding: 0 2px;
+  }
+  .topbar h1{ color:#f2ede0; font-size: 20px; letter-spacing:0.3px; }
+  .topbar .status{ font-size: 12px; color:#a9bccf; display:flex; align-items:center; gap:6px;}
+  .dot{ width:7px; height:7px; border-radius:50%; background:#5cb98a; display:inline-block; }
+  .logout-btn{
+    background:transparent; border:1px solid #33506e; color:#cdd9e6;
+    padding:6px 12px; border-radius:6px; font-size:12px; cursor:pointer; font-family:inherit;
+  }
+  .logout-btn:hover{ border-color:#5c7c9c; }
+
+  /* row 1: year / month / saldo precedente - top right */
+  .row-controls{
+    display:flex; justify-content:flex-end; gap:22px; flex-wrap:wrap; margin-bottom:16px;
+  }
+  .ctrl-box{ display:flex; flex-direction:column; gap:6px; min-width:130px; }
+  .ctrl-box label{
+    font-size: 11px; text-transform:uppercase; letter-spacing: 0.6px;
+    color:#a9bccf; font-weight:600; text-align:center;
+  }
+  .ctrl-box select, .ctrl-box input{
+    height: var(--card-h1); border-radius:8px; border:1px solid var(--border);
+    background: var(--paper); color:var(--ink); font-size:16px; text-align:center;
+    font-family: inherit; padding: 6px; cursor:pointer;
+  }
+  .ctrl-box input[type=number]{ cursor:text; font-weight:600; }
+  .ctrl-box select{ font-weight:600; }
+  #val-saldo-precedente{
+    height: var(--card-h1); border-radius:8px; border:1px solid var(--green-deep);
+    background: var(--green-deep); color:#fff; font-weight:700;
+    font-size: 20px; font-family:"JetBrains Mono","Courier New",monospace;
+    display:flex; align-items:center; justify-content:center; text-align:center;
+  }
+
+  /* row 2: 4 summary boxes */
+  .row-summary{
+    display:grid; grid-template-columns: repeat(5, 1fr); gap: 14px; margin-bottom: 20px;
+  }
+  .summary-box{
+    background: var(--paper); border:1px solid var(--border); border-radius:10px;
+    height: var(--card-h2); display:flex; flex-direction:column;
+    align-items:center; justify-content:center; gap:8px; padding: 8px;
+  }
+  .summary-box label{
+    font-size: 12px; text-transform:uppercase; letter-spacing:0.6px;
+    color: var(--ink-soft); font-weight:700;
+  }
+  .summary-box .value{
+    font-family:"JetBrains Mono","Courier New",monospace; font-size: 22px; font-weight:700;
+  }
+  .summary-box input.value-input{
+    width: 92%; text-align:center; font-family:"JetBrains Mono","Courier New",monospace;
+    font-size: 20px; font-weight:700; border:1px solid var(--border); border-radius:6px;
+    padding:8px 4px; background:#fff; color:var(--ink);
+  }
+  .summary-box.pos .value{ color: var(--green-deep); }
+  .summary-box.neg .value{ color: var(--red-deep); }
+
+  /* table */
+  .ledger-wrap{
+    background: var(--paper); border:1px solid var(--border); border-radius:10px;
+    padding: 4px; overflow-x:auto;
+  }
+  table.ledger{ width:100%; border-collapse:collapse; min-width: 720px; }
+  table.ledger thead th{
+    font-size: 11px; text-transform:uppercase; letter-spacing:0.5px;
+    color:#fff; background: var(--green-deep);
+    padding: 10px 8px; text-align:left; position:sticky; top:0;
+  }
+  table.ledger thead th:first-child{ border-radius: 6px 0 0 0; }
+  table.ledger thead th:last-child{ border-radius: 0 6px 0 0; }
+  table.ledger tbody td{
+    border-bottom: 1px solid var(--paper-line);
+    padding: 3px 6px;
+  }
+  table.ledger tbody tr:nth-child(even){ background: #efeadd; }
+  table.ledger input{
+    width:100%; border:none; background:#fff; font-family:inherit;
+    font-size: 14px; padding: 8px 6px; color:var(--ink); border-radius:4px;
+  }
+  table.ledger input:focus{ outline: 2px solid var(--gold); outline-offset:-2px; border-radius:4px; background:#fff; }
+  table.ledger td.col-importo input{
+    font-family:"JetBrains Mono","Courier New",monospace; text-align:right;
+    font-size: 18px; font-weight:700; color: var(--ink);
+  }
+  table.ledger td.col-rimanenza{
+    font-family:"JetBrains Mono","Courier New",monospace; text-align:right;
+    color: var(--ink); font-size: 17px; font-weight:700; padding-right: 12px;
+  }
+  table.ledger td.col-rimanenza.neg{ color: var(--red-deep); }
+  table.ledger select{
+    width:100%; border:none; background:transparent; font-family:inherit;
+    font-size: 12px; padding: 7px 4px; color:var(--ink); cursor:pointer; font-weight:600;
+  }
+  table.ledger select:focus{ outline: 2px solid var(--gold); outline-offset:-2px; border-radius:4px; background:#fff; }
+  table.ledger select[data-stato="ripeti"]{ color: var(--green-deep); }
+  table.ledger select[data-stato="modifica"]{ color: var(--gold); }
+  table.ledger input:disabled{ background: #e9e3d2; color: var(--ink-soft); cursor:not-allowed; }
+  th.col-data{ width:110px; } th.col-spese{ width:170px; } th.col-importo{ width:130px; } th.col-stato{ width:110px; } th.col-rimanenza{ width:140px; }
+
+  .footer-note{
+    color:#8ea3b8; font-size: 11px; text-align:center; margin-top: 14px; line-height:1.6;
+  }
+
+  @media (max-width:700px){
+    .row-controls{ justify-content:center; }
+    .ctrl-box{ min-width: 100px; }
+    .row-summary{ grid-template-columns: repeat(2,1fr); }
+    .row-summary .summary-box:last-child{ grid-column: span 2; }
+    table.ledger{ min-width: 620px; }
+  }
+</style>
+</head>
+<body>
+
+<div id="login-screen">
+  <div class="login-box">
+    <h1>Contabilità Spese</h1>
+    <p class="sub" id="login-sub">Caricamento...</p>
+    <input type="password" id="pwd-input" placeholder="Password" autocomplete="off">
+    <input type="password" id="pwd-confirm" placeholder="Conferma password" style="display:none">
+    <button id="pwd-btn">Accedi</button>
+    <p class="login-err" id="pwd-err"></p>
+    <p class="login-hint">I dati sono salvati in modo persistente e legati al tuo account. La password protegge l'accesso a questa pagina su questo dispositivo.</p>
+  </div>
+</div>
+
+<div id="app">
+  <div class="topbar">
+    <h1>Contabilità Spese</h1>
+    <div style="display:flex; align-items:center; gap:14px;">
+      <span class="status" id="save-status"><span class="dot"></span>Salvato</span>
+      <button class="logout-btn" id="logout-btn">Blocca</button>
+    </div>
+  </div>
+
+  <div class="row-controls">
+    <div class="ctrl-box">
+      <label>Anno</label>
+      <select id="sel-anno"></select>
+    </div>
+    <div class="ctrl-box">
+      <label>Mese</label>
+      <select id="sel-mese"></select>
+    </div>
+    <div class="ctrl-box">
+      <label>Correzioni C/C</label>
+      <input type="text" inputmode="decimal" id="in-correzioni" placeholder="€ 0,00">
+    </div>
+    <div class="ctrl-box">
+      <label>Saldo Mese Precedente</label>
+      <div class="value" id="val-saldo-precedente">€ 0,00</div>
+    </div>
+  </div>
+
+  <div class="row-summary">
+    <div class="summary-box" id="box-banca">
+      <label>Saldo Mese Attuale</label>
+      <div class="value" id="val-banca">0,00</div>
+    </div>
+    <div class="summary-box" id="box-differenza">
+      <label>Differenza</label>
+      <div class="value" id="val-differenza">0,00</div>
+    </div>
+    <div class="summary-box">
+      <label>Provvigioni</label>
+      <input type="text" inputmode="decimal" id="in-provvigioni" class="value-input" placeholder="€ 0,00">
+    </div>
+    <div class="summary-box">
+      <label>Versamento su C/C</label>
+      <input type="text" inputmode="decimal" id="in-versamento" class="value-input" placeholder="€ 0,00">
+    </div>
+    <div class="summary-box neg">
+      <label>Spese</label>
+      <div class="value" id="val-spese">0,00</div>
+    </div>
+  </div>
+
+  <div class="ledger-wrap">
+    <table class="ledger">
+      <thead>
+        <tr>
+          <th class="col-data">Data</th>
+          <th class="col-spese">Spese</th>
+          <th class="col-importo">Importo</th>
+          <th class="col-stato">Stato</th>
+          <th class="col-rimanenza">Rimanenza C/C</th>
+        </tr>
+      </thead>
+      <tbody id="ledger-body"></tbody>
+    </table>
+  </div>
+
+  <p class="footer-note">Contabilità Spese &middot; dati salvati automaticamente per anno e mese selezionati</p>
+</div>
+
+<script>
+const N_ROWS = 20;
+const MESI = ["Gennaio","Febbraio","Marzo","Aprile","Maggio","Giugno","Luglio","Agosto","Settembre","Ottobre","Novembre","Dicembre"];
+let currentKey = null;
+let saveTimer = null;
+let suppressSave = false;
+
+// ==========================================================
+// CONFIGURAZIONE SUPABASE — incolla qui i dati del tuo progetto
+// (li trovi su supabase.com > il tuo progetto > Settings > API)
+// ==========================================================
+const SUPABASE_CONFIG = {
+  url: "https://wpocqesnanardbgbgras.supabase.co",
+  anonKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indwb2NxZXNuYW5hcmRiZ2JncmFzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYwMzMwNjgsImV4cCI6MjEwMTYwOTA2OH0.YC0JaXg5l2vvl_CntQmUv4y0-LISzDMb-UMPzEfYOdA"
+};
+// ==========================================================
+
+// Adapter di salvataggio a 3 livelli:
+// 1) window.storage se la pagina gira dentro Claude.ai
+// 2) Supabase se è stata configurata la sezione sopra (sito pubblicato)
+// 3) localStorage come ultima spiaggia (solo su questo browser)
+const hasCloudStorage = (typeof window.storage !== 'undefined' && window.storage && typeof window.storage.get === 'function');
+const supabaseConfigured = SUPABASE_CONFIG.url && SUPABASE_CONFIG.url !== 'INSERISCI_QUI';
+let sb = null;
+if(!hasCloudStorage && supabaseConfigured && typeof supabase !== 'undefined'){
+  sb = supabase.createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.anonKey);
+}
+
+const store = {
+  async get(key){
+    if(hasCloudStorage){
+      return await window.storage.get(key, false);
+    }
+    if(sb){
+      const { data, error } = await sb.from('contabilita_spese').select('value').eq('key', key).maybeSingle();
+      if(error || !data){ throw new Error('not found'); }
+      return { key, value: data.value };
+    }
+    const v = localStorage.getItem(key);
+    if(v === null){ throw new Error('not found'); }
+    return { key, value: v };
+  },
+  async set(key, value){
+    if(hasCloudStorage){
+      return await window.storage.set(key, value, false);
+    }
+    if(sb){
+      const { error } = await sb.from('contabilita_spese').upsert({ key, value });
+      if(error) throw error;
+      return { key, value };
+    }
+    localStorage.setItem(key, value);
+    return { key, value };
+  },
+  async list(prefix){
+    if(hasCloudStorage){
+      return await window.storage.list(prefix, false);
+    }
+    if(sb){
+      const { data, error } = await sb.from('contabilita_spese').select('key').like('key', prefix + '%');
+      if(error) throw error;
+      return { keys: (data || []).map(d => d.key) };
+    }
+    const keys = [];
+    for(let i=0;i<localStorage.length;i++){
+      const k = localStorage.key(i);
+      if(k && k.startsWith(prefix)) keys.push(k);
+    }
+    return { keys };
+  }
+};
+
+// ---------- utils ----------
+function fmt(n){
+  if(isNaN(n)) n = 0;
+  return n.toLocaleString('it-IT', {minimumFractionDigits:2, maximumFractionDigits:2});
+}
+function formatEuro(n){
+  if(isNaN(n)) return '';
+  return '€ ' + n.toLocaleString('it-IT', {minimumFractionDigits:2, maximumFractionDigits:2});
+}
+function parseEuro(str){
+  if(str === null || str === undefined) return NaN;
+  let s = String(str).replace(/[€\s]/g,'').trim();
+  if(s === '') return NaN;
+  if(s.includes(',') && s.includes('.')){
+    s = s.replace(/\./g,'').replace(',', '.');
+  } else if(s.includes(',')){
+    s = s.replace(',', '.');
+  }
+  return parseFloat(s);
+}
+async function sha256(text){
+  const enc = new TextEncoder().encode(text);
+  const buf = await crypto.subtle.digest('SHA-256', enc);
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+
+// ---------- LOGIN ----------
+const loginScreen = document.getElementById('login-screen');
+const appEl = document.getElementById('app');
+const pwdInput = document.getElementById('pwd-input');
+const pwdConfirm = document.getElementById('pwd-confirm');
+const pwdBtn = document.getElementById('pwd-btn');
+const pwdErr = document.getElementById('pwd-err');
+const loginSub = document.getElementById('login-sub');
+
+let mode = 'checking'; // checking | create | verify
+
+async function initLogin(){
+  try{
+    const res = await store.get('auth:password_hash', false);
+    if(res && res.value){
+      mode = 'verify';
+      loginSub.textContent = 'Inserisci la password per accedere';
+      pwdConfirm.style.display = 'none';
+      pwdBtn.textContent = 'Accedi';
+    } else {
+      throw new Error('no password');
+    }
+  } catch(e){
+    mode = 'create';
+    loginSub.textContent = 'Crea una password per proteggere i tuoi dati';
+    pwdConfirm.style.display = 'block';
+    pwdBtn.textContent = 'Crea password';
+  }
+}
+
+async function handleLogin(){
+  pwdErr.textContent = '';
+  const pwd = pwdInput.value;
+  if(!pwd || pwd.length < 4){
+    pwdErr.textContent = 'La password deve avere almeno 4 caratteri.';
+    return;
+  }
+  if(mode === 'create'){
+    if(pwd !== pwdConfirm.value){
+      pwdErr.textContent = 'Le password non coincidono.';
+      return;
+    }
+    const hash = await sha256(pwd);
+    try{
+      await store.set('auth:password_hash', hash, false);
+      unlockApp();
+    } catch(e){
+      pwdErr.textContent = 'Errore nel salvataggio. Riprova.';
+    }
+  } else {
+    try{
+      const res = await store.get('auth:password_hash', false);
+      const hash = await sha256(pwd);
+      if(res && res.value === hash){
+        unlockApp();
+      } else {
+        pwdErr.textContent = 'Password errata.';
+      }
+    } catch(e){
+      pwdErr.textContent = 'Errore di verifica. Riprova.';
+    }
+  }
+}
+
+pwdBtn.addEventListener('click', handleLogin);
+pwdInput.addEventListener('keydown', e=>{ if(e.key==='Enter'){ if(mode==='verify') handleLogin(); else pwdConfirm.focus(); }});
+pwdConfirm.addEventListener('keydown', e=>{ if(e.key==='Enter') handleLogin(); });
+
+function unlockApp(){
+  loginScreen.style.display = 'none';
+  appEl.style.display = 'block';
+  startApp();
+}
+
+document.getElementById('logout-btn').addEventListener('click', ()=>{
+  appEl.style.display = 'none';
+  loginScreen.style.display = 'flex';
+  pwdInput.value=''; pwdConfirm.value=''; pwdErr.textContent='';
+  mode = 'verify';
+  loginSub.textContent = 'Inserisci la password per accedere';
+  pwdConfirm.style.display = 'none';
+  pwdBtn.textContent = 'Accedi';
+});
+
+// ---------- APP ----------
+const selAnno = document.getElementById('sel-anno');
+const selMese = document.getElementById('sel-mese');
+const valSaldoPrec = document.getElementById('val-saldo-precedente');
+let saldoPrecCorrente = 0;
+const inCorrezioni = document.getElementById('in-correzioni');
+const valBanca = document.getElementById('val-banca');
+const boxBanca = document.getElementById('box-banca');
+const inProvvigioni = document.getElementById('in-provvigioni');
+const inVersamento = document.getElementById('in-versamento');
+const valDifferenza = document.getElementById('val-differenza');
+const valSpese = document.getElementById('val-spese');
+const boxDifferenza = document.getElementById('box-differenza');
+const ledgerBody = document.getElementById('ledger-body');
+const saveStatus = document.getElementById('save-status');
+
+function buildSelectors(){
+  const now = new Date();
+  const curYear = now.getFullYear() < 2026 ? 2026 : now.getFullYear();
+  for(let y=2026; y<=2066; y++){
+    const opt = document.createElement('option');
+    opt.value = y; opt.textContent = y;
+    if(y === curYear) opt.selected = true;
+    selAnno.appendChild(opt);
+  }
+  MESI.forEach((m, i)=>{
+    const opt = document.createElement('option');
+    opt.value = i+1; opt.textContent = m;
+    if(i === now.getMonth()) opt.selected = true;
+    selMese.appendChild(opt);
+  });
+}
+
+function pad(n){ return String(n).padStart(2,'0'); }
+function daysInMonth(year, month){ return new Date(year, month, 0).getDate(); }
+
+function buildRows(){
+  ledgerBody.innerHTML = '';
+  for(let i=0;i<N_ROWS;i++){
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><input type="date" data-row="${i}" data-field="data"></td>
+      <td><input type="text" data-row="${i}" data-field="spese" placeholder="Descrizione spesa"></td>
+      <td class="col-importo"><input type="text" inputmode="decimal" data-row="${i}" data-field="importo" placeholder="0,00"></td>
+      <td class="col-stato">
+        <select data-row="${i}" data-recurring-id="" data-prev="sbloccato">
+          <option value="sbloccato">Sbloccato</option>
+          <option value="ripeti">Ripeti</option>
+          <option value="modifica">Modifica</option>
+        </select>
+      </td>
+      <td class="col-rimanenza" id="rim-${i}">—</td>
+    `;
+    ledgerBody.appendChild(tr);
+  }
+  ledgerBody.querySelectorAll('input').forEach(inp=>{
+    inp.addEventListener('input', ()=>{ recalc(); queueSave(); });
+  });
+  ledgerBody.querySelectorAll('input[data-field="importo"]').forEach(inp=>{
+    inp.addEventListener('focus', ()=>{
+      const raw = parseEuro(inp.value);
+      inp.value = isNaN(raw) ? '' : String(raw).replace('.', ',');
+    });
+    inp.addEventListener('blur', ()=>{
+      const raw = parseEuro(inp.value);
+      inp.value = isNaN(raw) ? '' : formatEuro(raw);
+      recalc(); queueSave();
+    });
+  });
+  ledgerBody.querySelectorAll('select').forEach(sel=>{
+    sel.addEventListener('change', ()=> handleStatoChange(parseInt(sel.dataset.row)));
+  });
+}
+
+function lockRow(rowIndex, locked){
+  ['data','spese','importo'].forEach(field=>{
+    const el = ledgerBody.querySelector(`input[data-row="${rowIndex}"][data-field="${field}"]`);
+    el.disabled = locked;
+  });
+}
+
+function populateRows(rows){
+  rows.forEach((r, i)=>{
+    if(i>=N_ROWS) return;
+    ledgerBody.querySelector(`input[data-row="${i}"][data-field="data"]`).value = r.data || '';
+    ledgerBody.querySelector(`input[data-row="${i}"][data-field="spese"]`).value = r.spese || '';
+    ledgerBody.querySelector(`input[data-row="${i}"][data-field="importo"]`).value = r.importo ? formatEuro(parseFloat(r.importo)) : '';
+    const sel = ledgerBody.querySelector(`select[data-row="${i}"]`);
+    const stato = r.stato || 'sbloccato';
+    sel.value = stato;
+    sel.dataset.prev = stato;
+    sel.dataset.recurringId = r.recurringId || '';
+    lockRow(i, stato === 'ripeti');
+  });
+}
+
+function currentRows(){
+  const rows = [];
+  for(let i=0;i<N_ROWS;i++){
+    const data = ledgerBody.querySelector(`input[data-row="${i}"][data-field="data"]`).value;
+    const spese = ledgerBody.querySelector(`input[data-row="${i}"][data-field="spese"]`).value;
+    const importoDisplay = ledgerBody.querySelector(`input[data-row="${i}"][data-field="importo"]`).value;
+    const importoNum = parseEuro(importoDisplay);
+    const importo = isNaN(importoNum) ? '' : String(importoNum);
+    const sel = ledgerBody.querySelector(`select[data-row="${i}"]`);
+    const stato = sel.value;
+    const recurringId = sel.dataset.recurringId || null;
+    rows.push({data, spese, importo, stato, recurringId: recurringId || null});
+  }
+  return rows;
+}
+
+// ---------- RIPETI / MODIFICA ----------
+async function loadRules(){
+  try{
+    const res = await store.get('recurring:rules');
+    return res && res.value ? JSON.parse(res.value) : [];
+  } catch(e){ return []; }
+}
+async function saveRules(rules){
+  try{ await store.set('recurring:rules', JSON.stringify(rules)); } catch(e){ /* ignora */ }
+}
+
+async function materializeRecurring(year, month, rows){
+  const rules = await loadRules();
+  let rowsChanged = false;
+  let rulesChanged = false;
+  const periodVal = year*12+month;
+  const periodKey = `${year}-${pad(month)}`;
+  for(const rule of rules){
+    if(!rule.active) continue;
+    const ruleStartVal = rule.startYear*12+rule.startMonth;
+    if(periodVal < ruleStartVal) continue;
+    if(!rule.materializedPeriods) rule.materializedPeriods = [];
+    const already = rows.some(r=> r.recurringId === rule.id);
+    if(already){
+      if(!rule.materializedPeriods.includes(periodKey)){
+        rule.materializedPeriods.push(periodKey);
+        rulesChanged = true;
+      }
+      continue;
+    }
+    const emptyIdx = rows.findIndex(r=> !r.data && !r.spese && !r.importo);
+    if(emptyIdx === -1) continue;
+    const day = Math.min(rule.day, daysInMonth(year, month));
+    rows[emptyIdx] = {
+      data: `${year}-${pad(month)}-${pad(day)}`,
+      spese: rule.descrizione,
+      importo: String(rule.importo),
+      stato: 'ripeti',
+      recurringId: rule.id
+    };
+    rowsChanged = true;
+    if(!rule.materializedPeriods.includes(periodKey)){
+      rule.materializedPeriods.push(periodKey);
+    }
+    rulesChanged = true;
+  }
+  if(rulesChanged) await saveRules(rules);
+  return rowsChanged;
+}
+
+function periodValOf(periodKey){
+  const [y, m] = periodKey.split('-').map(Number);
+  return y*12+m;
+}
+
+async function cancelFuture(recurringId, fromAnno, fromMese){
+  const fromVal = fromAnno*12+fromMese;
+  saveStatus.innerHTML = '<span class="dot" style="background:#d9a441"></span>Pulizia mesi futuri...';
+
+  let allKeys = [];
+  try{
+    const res = await store.list('ledger:');
+    allKeys = (res && res.keys) ? res.keys : [];
+  } catch(e){ allKeys = []; }
+
+  for(const k of allKeys){
+    if(k === currentKey) continue;
+    const m = k.match(/^ledger:(\d{4})-(\d{2})$/);
+    if(!m) continue;
+    const py = parseInt(m[1]), pm = parseInt(m[2]);
+    if(py*12+pm < fromVal) continue;
+    try{
+      const res = await store.get(k);
+      if(res && res.value){
+        const periodData = JSON.parse(res.value);
+        const idx = (periodData.rows||[]).findIndex(r=> r.recurringId === recurringId);
+        if(idx !== -1){
+          periodData.rows[idx] = {data:'', spese:'', importo:'', stato:'sbloccato', recurringId:null};
+          await store.set(k, JSON.stringify(periodData));
+        }
+      }
+    } catch(e){ /* periodo non trovato, ignora */ }
+  }
+
+  const rules = await loadRules();
+  const rule = rules.find(r=> r.id === recurringId);
+  if(rule){
+    rule.materializedPeriods = (rule.materializedPeriods||[]).filter(p=> periodValOf(p) < fromVal);
+    rule.active = false;
+    await saveRules(rules);
+  }
+}
+
+async function handleStatoChange(rowIndex){
+  const sel = ledgerBody.querySelector(`select[data-row="${rowIndex}"]`);
+  const newStato = sel.value;
+  const oldStato = sel.dataset.prev || 'sbloccato';
+  const recurringId = sel.dataset.recurringId || null;
+  const dataInput = ledgerBody.querySelector(`input[data-row="${rowIndex}"][data-field="data"]`);
+  const speseInput = ledgerBody.querySelector(`input[data-row="${rowIndex}"][data-field="spese"]`);
+  const importoInput = ledgerBody.querySelector(`input[data-row="${rowIndex}"][data-field="importo"]`);
+
+  if(newStato === 'ripeti'){
+    const importoValido = !isNaN(parseEuro(importoInput.value));
+    if(!dataInput.value || !speseInput.value || !importoValido){
+      alert('Compila Data, Spese e Importo prima di attivare Ripeti.');
+      sel.value = oldStato;
+      return;
+    }
+    const rules = await loadRules();
+    const day = parseInt(dataInput.value.split('-')[2]);
+    const anno = parseInt(selAnno.value);
+    const mese = parseInt(selMese.value);
+    const importoValore = parseEuro(importoInput.value) || 0;
+    if(recurringId){
+      const rule = rules.find(r=> r.id === recurringId);
+      if(rule){
+        rule.day = day;
+        rule.descrizione = speseInput.value;
+        rule.importo = importoValore;
+        rule.startYear = anno;
+        rule.startMonth = mese;
+        rule.active = true;
+      }
+    } else {
+      const newId = 'r_' + Date.now() + '_' + Math.floor(Math.random()*1000);
+      rules.push({
+        id: newId, day,
+        descrizione: speseInput.value,
+        importo: importoValore,
+        startYear: anno, startMonth: mese, active: true
+      });
+      sel.dataset.recurringId = newId;
+    }
+    await saveRules(rules);
+    importoInput.value = formatEuro(importoValore);
+    lockRow(rowIndex, true);
+  } else if(newStato === 'modifica'){
+    lockRow(rowIndex, false);
+  } else {
+    if(recurringId){
+      const anno = parseInt(selAnno.value);
+      const mese = parseInt(selMese.value);
+      await cancelFuture(recurringId, anno, mese);
+      sel.dataset.recurringId = '';
+      dataInput.value = '';
+      speseInput.value = '';
+      importoInput.value = '';
+    }
+    lockRow(rowIndex, false);
+  }
+  sel.dataset.prev = newStato;
+  recalc();
+  queueSave();
+}
+
+function recalc(){
+  const saldoPrec = saldoPrecCorrente + (parseEuro(inCorrezioni.value) || 0);
+  const provvigioni = parseEuro(inProvvigioni.value) || 0;
+  const versamento = parseEuro(inVersamento.value) || 0;
+  const saldoAttuale = saldoPrec + provvigioni + versamento;
+
+  let totaleSpese = 0;
+  let rimPrecedente = saldoAttuale;
+  for(let i=0;i<N_ROWS;i++){
+    const importoStr = ledgerBody.querySelector(`input[data-row="${i}"][data-field="importo"]`).value;
+    const importoParsed = parseEuro(importoStr);
+    const importo = (importoStr.trim() !== '' && !isNaN(importoParsed)) ? importoParsed : 0;
+    totaleSpese += importo;
+    const rim = rimPrecedente - importo;
+    const rimCell = document.getElementById(`rim-${i}`);
+    rimCell.textContent = fmt(rim);
+    rimCell.classList.toggle('neg', rim < 0);
+    rimPrecedente = rim;
+  }
+
+  valSpese.textContent = fmt(totaleSpese);
+
+  const differenza = saldoAttuale - totaleSpese;
+  valDifferenza.textContent = fmt(differenza);
+  boxDifferenza.classList.remove('pos','neg');
+  boxDifferenza.classList.add(differenza >= 0 ? 'pos' : 'neg');
+
+  valBanca.textContent = fmt(saldoAttuale);
+  boxBanca.classList.remove('pos','neg');
+  boxBanca.classList.add(saldoAttuale >= 0 ? 'pos' : 'neg');
+}
+
+function keyFor(anno, mese){
+  return `ledger:${anno}-${String(mese).padStart(2,'0')}`;
+}
+
+async function loadPeriod(){
+  const anno = parseInt(selAnno.value);
+  const mese = parseInt(selMese.value);
+  currentKey = keyFor(anno, mese);
+  suppressSave = true;
+
+  let data = null;
+  try{
+    const res = await store.get(currentKey, false);
+    if(res && res.value) data = JSON.parse(res.value);
+  } catch(e){ data = null; }
+
+  let rows = (data && data.rows) ? data.rows.slice(0, N_ROWS) : [];
+  while(rows.length < N_ROWS) rows.push({data:'', spese:'', importo:'', stato:'sbloccato', recurringId:null});
+
+  const materialized = await materializeRecurring(anno, mese, rows);
+
+  buildRows();
+  populateRows(rows);
+
+  if(data){
+    inCorrezioni.value = data.correzioni ? formatEuro(parseFloat(data.correzioni)) : '';
+    inProvvigioni.value = data.provvigioni ? formatEuro(parseFloat(data.provvigioni)) : '';
+    inVersamento.value = data.versamento ? formatEuro(parseFloat(data.versamento)) : '';
+  } else {
+    inCorrezioni.value = '';
+    inProvvigioni.value = '';
+    inVersamento.value = '';
+  }
+
+  // Saldo Mese Precedente: sempre uguale alla Differenza del mese/anno precedente
+  let prevMese = mese - 1;
+  let prevAnno = anno;
+  if(prevMese < 1){ prevMese = 12; prevAnno -= 1; }
+  let prevDifferenza = 0;
+  try{
+    const prevRes = await store.get(keyFor(prevAnno, prevMese), false);
+    if(prevRes && prevRes.value){
+      const prevData = JSON.parse(prevRes.value);
+      const prevSaldoPrec = parseFloat(prevData.saldoPrecedente) || 0;
+      const prevCorrezioni = parseFloat(prevData.correzioni) || 0;
+      const prevProvvigioni = parseFloat(prevData.provvigioni) || 0;
+      const prevVersamento = parseFloat(prevData.versamento) || 0;
+      const prevSaldoAttuale = prevSaldoPrec + prevCorrezioni + prevProvvigioni + prevVersamento;
+      const prevSpese = (prevData.rows||[]).reduce((s,r)=> s + (parseFloat(r.importo)||0), 0);
+      prevDifferenza = prevSaldoAttuale - prevSpese;
+    }
+  } catch(e){ /* nessun mese precedente salvato: si parte da zero */ }
+  saldoPrecCorrente = prevDifferenza;
+  valSaldoPrec.textContent = formatEuro(saldoPrecCorrente);
+
+  recalc();
+  suppressSave = false;
+  await savePeriod();
+}
+
+function queueSave(){
+  if(suppressSave) return;
+  saveStatus.innerHTML = '<span class="dot" style="background:#d9a441"></span>Salvataggio...';
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(savePeriod, 500);
+}
+
+async function savePeriod(){
+  const correzioniRaw = parseEuro(inCorrezioni.value);
+  const provvigioniRaw = parseEuro(inProvvigioni.value);
+  const versamentoRaw = parseEuro(inVersamento.value);
+  const payload = {
+    saldoPrecedente: String(saldoPrecCorrente),
+    correzioni: isNaN(correzioniRaw) ? '' : String(correzioniRaw),
+    provvigioni: isNaN(provvigioniRaw) ? '' : String(provvigioniRaw),
+    versamento: isNaN(versamentoRaw) ? '' : String(versamentoRaw),
+    rows: currentRows()
+  };
+  try{
+    await store.set(currentKey, JSON.stringify(payload), false);
+    saveStatus.innerHTML = '<span class="dot"></span>Salvato';
+  } catch(e){
+    saveStatus.innerHTML = '<span class="dot" style="background:#c0524a"></span>Errore salvataggio';
+  }
+}
+
+function startApp(){
+  buildSelectors();
+  loadPeriod();
+  selAnno.addEventListener('change', loadPeriod);
+  selMese.addEventListener('change', loadPeriod);
+  inCorrezioni.addEventListener('focus', ()=>{
+    const raw = parseEuro(inCorrezioni.value);
+    inCorrezioni.value = isNaN(raw) ? '' : String(raw).replace('.', ',');
+  });
+  inCorrezioni.addEventListener('blur', ()=>{
+    const raw = parseEuro(inCorrezioni.value);
+    inCorrezioni.value = isNaN(raw) ? '' : formatEuro(raw);
+    recalc(); queueSave();
+  });
+  inProvvigioni.addEventListener('focus', ()=>{
+    const raw = parseEuro(inProvvigioni.value);
+    inProvvigioni.value = isNaN(raw) ? '' : String(raw).replace('.', ',');
+  });
+  inProvvigioni.addEventListener('blur', ()=>{
+    const raw = parseEuro(inProvvigioni.value);
+    inProvvigioni.value = isNaN(raw) ? '' : formatEuro(raw);
+    recalc(); queueSave();
+  });
+  inVersamento.addEventListener('focus', ()=>{
+    const raw = parseEuro(inVersamento.value);
+    inVersamento.value = isNaN(raw) ? '' : String(raw).replace('.', ',');
+  });
+  inVersamento.addEventListener('blur', ()=>{
+    const raw = parseEuro(inVersamento.value);
+    inVersamento.value = isNaN(raw) ? '' : formatEuro(raw);
+    recalc(); queueSave();
+  });
+  [inCorrezioni, inProvvigioni, inVersamento].forEach(inp=>{
+    inp.addEventListener('input', ()=>{ recalc(); queueSave(); });
+  });
+}
+
+initLogin();
+</script>
+</body>
+</html>

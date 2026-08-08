@@ -102,13 +102,26 @@
     font-size: 20px; font-family:"JetBrains Mono","Courier New",monospace;
     display:flex; align-items:center; justify-content:center; text-align:center;
   }
+  .refresh-btn{
+    border:none; background:transparent; color:#a9bccf; cursor:pointer;
+    font-size:13px; padding:0 0 0 4px; vertical-align:middle;
+  }
+  .refresh-btn:hover{ color:#fff; }
+  .refresh-btn:active{ transform: rotate(180deg); }
+  .ricalcola-btn{
+    height: var(--card-h1); border-radius:8px; border:1px solid var(--gold);
+    background: #fff; color: var(--gold); font-weight:700; font-size: 13px;
+    cursor:pointer; padding: 6px 10px; white-space:nowrap;
+  }
+  .ricalcola-btn:hover{ background: var(--gold); color:#fff; }
+  .ricalcola-btn:disabled{ opacity:0.5; cursor:wait; }
 
   /* row 2: 4 summary boxes */
   .row-summary{
     display:grid; grid-template-columns: repeat(5, 1fr); gap: 14px; margin-bottom: 20px;
   }
   .summary-box{
-    background: var(--paper); border:1px solid var(--border); border-radius:10px;
+    background: #fff; border:1px solid var(--border); border-radius:10px;
     height: var(--card-h2); display:flex; flex-direction:column;
     align-items:center; justify-content:center; gap:8px; padding: 8px;
   }
@@ -126,13 +139,16 @@
   }
   .summary-box.pos .value{ color: var(--green-deep); }
   .summary-box.neg .value{ color: var(--red-deep); }
+  .summary-box.box-spese{ background: #f9dcd9; border-color:#e3a9a3; }
+  .summary-box.negativo{ background: #fdf6cf; border-color:#e8d98a; }
+  .summary-box.negativo .value{ color: var(--red-deep); font-weight:800; font-size: 26px; }
 
   /* table */
   .ledger-wrap{
     background: var(--paper); border:1px solid var(--border); border-radius:10px;
     padding: 4px; overflow-x:auto;
   }
-  table.ledger{ width:100%; border-collapse:collapse; min-width: 720px; }
+  table.ledger{ width:100%; border-collapse:collapse; min-width: 780px; }
   table.ledger thead th{
     font-size: 11px; text-transform:uppercase; letter-spacing:0.5px;
     color:#fff; background: var(--green-deep);
@@ -167,10 +183,64 @@
   table.ledger select[data-stato="ripeti"]{ color: var(--green-deep); }
   table.ledger select[data-stato="modifica"]{ color: var(--gold); }
   table.ledger input:disabled{ background: #e9e3d2; color: var(--ink-soft); cursor:not-allowed; }
-  th.col-data{ width:110px; } th.col-spese{ width:170px; } th.col-importo{ width:130px; } th.col-stato{ width:110px; } th.col-rimanenza{ width:140px; }
+  tr.row-note input{
+    background: #d3ecd6; border: 1px solid #9ccca1; border-radius: 6px;
+  }
+  tr.row-note input:focus{ background: #fff; }
+  tr.row-note select{
+    background: #d3ecd6; border: 1px solid #9ccca1; border-radius: 6px;
+  }
+  tr.row-note td.col-rimanenza{ color: var(--ink-soft); font-style: italic; }
+  th.col-data{ width:110px; } th.col-spese{ width:170px; } th.col-importo{ width:130px; } th.col-stato{ width:110px; } th.col-rimanenza{ width:140px; } th.col-move{ width:64px; }
+  td.col-move{ text-align:center; white-space:nowrap; padding: 3px 4px; }
+  .move-btn{
+    width: 26px; height: 26px; border: 1px solid var(--border); background: var(--paper);
+    border-radius: 4px; cursor: pointer; font-size: 13px; color: var(--ink); line-height:1;
+    display:inline-flex; align-items:center; justify-content:center; font-weight:700;
+  }
+  .move-btn:disabled{ opacity: 0.25; cursor: not-allowed; }
+  .move-btn:active{ background: var(--gold); color:#fff; }
 
   .footer-note{
     color:#8ea3b8; font-size: 11px; text-align:center; margin-top: 14px; line-height:1.6;
+  }
+
+  .riepilogo-header{
+    display:flex; align-items:center; justify-content:space-between; margin-bottom: 22px; padding: 0 2px;
+  }
+  .riepilogo-header h2{ color:#f2ede0; font-size: 19px; }
+
+  .riepilogo-mese{ margin-bottom: 8px; }
+  .riepilogo-grid{
+    display:grid; grid-template-columns: repeat(6, 1fr); gap: 8px;
+  }
+  .riepilogo-box{
+    background: #fff; border:1px solid var(--border); border-radius:10px;
+    height: 75px; display:flex; flex-direction:column;
+    align-items:center; justify-content:center; gap:5px; padding: 8px;
+  }
+  .riepilogo-box label{
+    font-size: 11px; text-transform:uppercase; letter-spacing:0.4px;
+    color: var(--ink-soft); font-weight:700; text-align:center; line-height:1.2;
+  }
+  .riepilogo-box .value{
+    font-family:"JetBrains Mono","Courier New",monospace; font-size: 19px; font-weight:700;
+  }
+  .riepilogo-box.box-mese{ background: var(--green-deep); border-color: var(--green-deep); }
+  .riepilogo-box.box-mese .value{
+    font-family:"Fraunces","Georgia",serif; color:#fff; font-size: 20px; letter-spacing:0.5px;
+  }
+  .riepilogo-box.box-saldo-attuale{ background: #d3ecd6; border-color:#9ccca1; }
+  .riepilogo-box.box-spese{ background: #f9dcd9; border-color:#e3a9a3; }
+  .riepilogo-box.pos .value{ color: var(--green-deep); }
+  .riepilogo-box.neg .value{ color: var(--red-deep); }
+  .riepilogo-box.vuoto .value{ color: var(--ink-soft); font-style:italic; font-size:18px; font-weight:400; }
+  .riepilogo-box.negativo{ background: #fdf6cf; border-color:#e8d98a; }
+  .riepilogo-box.negativo .value{ color: var(--red-deep); font-weight:800; font-size: 22px; }
+
+  @media (max-width:900px){
+    .riepilogo-grid{ grid-template-columns: repeat(3,1fr); }
+    .riepilogo-box{ height: 65px; }
   }
 
   @media (max-width:700px){
@@ -179,6 +249,7 @@
     .row-summary{ grid-template-columns: repeat(2,1fr); }
     .row-summary .summary-box:last-child{ grid-column: span 2; }
     table.ledger{ min-width: 620px; }
+    .riepilogo-header{ flex-direction:column; align-items:flex-start; gap:10px; }
   }
 </style>
 </head>
@@ -206,6 +277,7 @@
   </div>
 
   <div class="row-controls">
+    <div id="controlli-mese" style="display:contents;">
     <div class="ctrl-box">
       <label>Anno</label>
       <select id="sel-anno"></select>
@@ -219,18 +291,30 @@
       <input type="text" inputmode="decimal" id="in-correzioni" placeholder="€ 0,00">
     </div>
     <div class="ctrl-box">
-      <label>Saldo Mese Precedente</label>
+      <label>Saldo Mese Precedente <button type="button" id="btn-refresh-saldo" class="refresh-btn" title="Ricalcola">⟳</button></label>
       <div class="value" id="val-saldo-precedente">€ 0,00</div>
+    </div>
+    </div>
+    <div class="ctrl-box">
+      <label>Riepilogo Anno</label>
+      <select id="sel-riepilogo-anno">
+        <option value="">— seleziona —</option>
+      </select>
+    </div>
+    <div class="ctrl-box">
+      <label>&nbsp;</label>
+      <button type="button" id="btn-ricalcola-anno" class="ricalcola-btn">↻ Ricalcola tutto l'anno</button>
     </div>
   </div>
 
+  <div id="main-content">
   <div class="row-summary">
     <div class="summary-box" id="box-banca">
-      <label>Saldo Mese Attuale</label>
+      <label>SALDO PRIMO DEL MESE</label>
       <div class="value" id="val-banca">0,00</div>
     </div>
     <div class="summary-box" id="box-differenza">
-      <label>Differenza</label>
+      <label>SALDO ULTIMO DEL MESE</label>
       <div class="value" id="val-differenza">0,00</div>
     </div>
     <div class="summary-box">
@@ -241,7 +325,7 @@
       <label>Versamento su C/C</label>
       <input type="text" inputmode="decimal" id="in-versamento" class="value-input" placeholder="€ 0,00">
     </div>
-    <div class="summary-box neg">
+    <div class="summary-box box-spese">
       <label>Spese</label>
       <div class="value" id="val-spese">0,00</div>
     </div>
@@ -251,6 +335,7 @@
     <table class="ledger">
       <thead>
         <tr>
+          <th class="col-move">Sposta</th>
           <th class="col-data">Data</th>
           <th class="col-spese">Spese</th>
           <th class="col-importo">Importo</th>
@@ -263,6 +348,15 @@
   </div>
 
   <p class="footer-note">Contabilità Spese &middot; dati salvati automaticamente per anno e mese selezionati</p>
+  </div>
+
+  <div id="riepilogo-view" style="display:none;">
+    <div class="riepilogo-header">
+      <h2 id="riepilogo-titolo">Riepilogo Anno</h2>
+      <button class="logout-btn" id="riepilogo-back">← Torna alla contabilità</button>
+    </div>
+    <div id="riepilogo-body"></div>
+  </div>
 </div>
 
 <script>
@@ -340,21 +434,25 @@ const store = {
 // ---------- utils ----------
 function fmt(n){
   if(isNaN(n)) n = 0;
-  return n.toLocaleString('it-IT', {minimumFractionDigits:2, maximumFractionDigits:2});
+  const segno = n < 0 ? '-' : '';
+  const assoluto = Math.abs(n);
+  return segno + assoluto.toFixed(2).replace('.', ',');
 }
 function formatEuro(n){
   if(isNaN(n)) return '';
-  return '€ ' + n.toLocaleString('it-IT', {minimumFractionDigits:2, maximumFractionDigits:2});
+  const segno = n < 0 ? '-' : '';
+  const assoluto = Math.abs(n);
+  return segno + '€ ' + assoluto.toFixed(2).replace('.', ',');
 }
 function parseEuro(str){
   if(str === null || str === undefined) return NaN;
   let s = String(str).replace(/[€\s]/g,'').trim();
   if(s === '') return NaN;
-  if(s.includes(',') && s.includes('.')){
-    s = s.replace(/\./g,'').replace(',', '.');
-  } else if(s.includes(',')){
-    s = s.replace(',', '.');
-  }
+  // Il punto è sempre separatore delle migliaia in questa app (mai decimale):
+  // "10.000" deve diventare 10000, non 10.
+  s = s.replace(/\./g, '');
+  // La virgola è sempre il separatore decimale.
+  s = s.replace(',', '.');
   return parseFloat(s);
 }
 async function sha256(text){
@@ -462,6 +560,12 @@ const valSpese = document.getElementById('val-spese');
 const boxDifferenza = document.getElementById('box-differenza');
 const ledgerBody = document.getElementById('ledger-body');
 const saveStatus = document.getElementById('save-status');
+const selRiepilogoAnno = document.getElementById('sel-riepilogo-anno');
+const mainContent = document.getElementById('main-content');
+const controlliMese = document.getElementById('controlli-mese');
+const riepilogoView = document.getElementById('riepilogo-view');
+const riepilogoTitolo = document.getElementById('riepilogo-titolo');
+const riepilogoBody = document.getElementById('riepilogo-body');
 
 function buildSelectors(){
   const now = new Date();
@@ -471,6 +575,10 @@ function buildSelectors(){
     opt.value = y; opt.textContent = y;
     if(y === curYear) opt.selected = true;
     selAnno.appendChild(opt);
+
+    const optR = document.createElement('option');
+    optR.value = y; optR.textContent = y;
+    selRiepilogoAnno.appendChild(optR);
   }
   MESI.forEach((m, i)=>{
     const opt = document.createElement('option');
@@ -480,16 +588,26 @@ function buildSelectors(){
   });
 }
 
+const N_ROWS_NOTE = 3;
+
 function pad(n){ return String(n).padStart(2,'0'); }
 function daysInMonth(year, month){ return new Date(year, month, 0).getDate(); }
 
 function buildRows(){
   ledgerBody.innerHTML = '';
+  const neutralStart = N_ROWS - N_ROWS_NOTE;
   for(let i=0;i<N_ROWS;i++){
     const tr = document.createElement('tr');
+    const isNote = i >= neutralStart;
+    if(isNote){ tr.classList.add('row-note'); }
+    const spesePlaceholder = isNote ? 'Promemoria (non conta nei calcoli)' : 'Descrizione spesa';
     tr.innerHTML = `
+      <td class="col-move">
+        <button type="button" class="move-btn" data-move="up" data-row="${i}" title="Sposta su">▲</button>
+        <button type="button" class="move-btn" data-move="down" data-row="${i}" title="Sposta giù">▼</button>
+      </td>
       <td><input type="date" data-row="${i}" data-field="data"></td>
-      <td><input type="text" data-row="${i}" data-field="spese" placeholder="Descrizione spesa"></td>
+      <td><input type="text" data-row="${i}" data-field="spese" placeholder="${spesePlaceholder}"></td>
       <td class="col-importo"><input type="text" inputmode="decimal" data-row="${i}" data-field="importo" placeholder="0,00"></td>
       <td class="col-stato">
         <select data-row="${i}" data-recurring-id="" data-prev="sbloccato">
@@ -519,6 +637,35 @@ function buildRows(){
   ledgerBody.querySelectorAll('select').forEach(sel=>{
     sel.addEventListener('change', ()=> handleStatoChange(parseInt(sel.dataset.row)));
   });
+  ledgerBody.querySelectorAll('.move-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const i = parseInt(btn.dataset.row);
+      const dir = btn.dataset.move === 'up' ? -1 : 1;
+      moveRow(i, dir);
+    });
+  });
+  updateMoveButtons();
+}
+
+function updateMoveButtons(){
+  ledgerBody.querySelectorAll('.move-btn[data-move="up"]').forEach(btn=>{
+    btn.disabled = (parseInt(btn.dataset.row) === 0);
+  });
+  ledgerBody.querySelectorAll('.move-btn[data-move="down"]').forEach(btn=>{
+    btn.disabled = (parseInt(btn.dataset.row) === N_ROWS - 1);
+  });
+}
+
+function moveRow(index, direction){
+  const target = index + direction;
+  if(target < 0 || target >= N_ROWS) return;
+  const rows = currentRows();
+  const tmp = rows[index];
+  rows[index] = rows[target];
+  rows[target] = tmp;
+  populateRows(rows);
+  recalc();
+  queueSave();
 }
 
 function lockRow(rowIndex, locked){
@@ -529,9 +676,12 @@ function lockRow(rowIndex, locked){
 }
 
 function populateRows(rows){
+  const anno = parseInt(selAnno.value);
+  const mese = parseInt(selMese.value);
+  const defaultData = `${anno}-${pad(mese)}-01`;
   rows.forEach((r, i)=>{
     if(i>=N_ROWS) return;
-    ledgerBody.querySelector(`input[data-row="${i}"][data-field="data"]`).value = r.data || '';
+    ledgerBody.querySelector(`input[data-row="${i}"][data-field="data"]`).value = r.data || defaultData;
     ledgerBody.querySelector(`input[data-row="${i}"][data-field="spese"]`).value = r.spese || '';
     ledgerBody.querySelector(`input[data-row="${i}"][data-field="importo"]`).value = r.importo ? formatEuro(parseFloat(r.importo)) : '';
     const sel = ledgerBody.querySelector(`select[data-row="${i}"]`);
@@ -589,7 +739,7 @@ async function materializeRecurring(year, month, rows){
       }
       continue;
     }
-    const emptyIdx = rows.findIndex(r=> !r.data && !r.spese && !r.importo);
+    const emptyIdx = rows.findIndex((r,idx)=> idx < (N_ROWS - N_ROWS_NOTE) && !r.spese && !r.importo);
     if(emptyIdx === -1) continue;
     const day = Math.min(rule.day, daysInMonth(year, month));
     rows[emptyIdx] = {
@@ -723,13 +873,19 @@ function recalc(){
 
   let totaleSpese = 0;
   let rimPrecedente = saldoAttuale;
+  const neutralStart = N_ROWS - N_ROWS_NOTE;
   for(let i=0;i<N_ROWS;i++){
+    const rimCell = document.getElementById(`rim-${i}`);
+    if(i >= neutralStart){
+      rimCell.textContent = '—';
+      rimCell.classList.remove('neg');
+      continue;
+    }
     const importoStr = ledgerBody.querySelector(`input[data-row="${i}"][data-field="importo"]`).value;
     const importoParsed = parseEuro(importoStr);
     const importo = (importoStr.trim() !== '' && !isNaN(importoParsed)) ? importoParsed : 0;
     totaleSpese += importo;
     const rim = rimPrecedente - importo;
-    const rimCell = document.getElementById(`rim-${i}`);
     rimCell.textContent = fmt(rim);
     rimCell.classList.toggle('neg', rim < 0);
     rimPrecedente = rim;
@@ -739,8 +895,9 @@ function recalc(){
 
   const differenza = saldoAttuale - totaleSpese;
   valDifferenza.textContent = fmt(differenza);
-  boxDifferenza.classList.remove('pos','neg');
+  boxDifferenza.classList.remove('pos','neg','negativo');
   boxDifferenza.classList.add(differenza >= 0 ? 'pos' : 'neg');
+  if(differenza < 0){ boxDifferenza.classList.add('negativo'); }
 
   valBanca.textContent = fmt(saldoAttuale);
   boxBanca.classList.remove('pos','neg');
@@ -749,6 +906,42 @@ function recalc(){
 
 function keyFor(anno, mese){
   return `ledger:${anno}-${String(mese).padStart(2,'0')}`;
+}
+
+function calcolaSpeseDaRighe(rows){
+  const neutralStart = N_ROWS - N_ROWS_NOTE;
+  let s = 0;
+  (rows || []).forEach((r, idx)=>{ if(idx < neutralStart){ s += parseFloat(r.importo) || 0; } });
+  return s;
+}
+
+// Calcola il Saldo Mese Precedente di (anno, mese) risalendo la catena all'indietro
+// finché non trova un mese senza dati salvati (base = 0). Non usa mai un valore
+// salvato in cache: è sempre ricalcolato da zero, quindi non può mai essere "vecchio".
+async function calcolaSaldoPrecedente(anno, mese){
+  const catena = [];
+  let a = anno, m = mese;
+  let sicurezza = 0;
+  while(sicurezza < 600){
+    sicurezza++;
+    m -= 1;
+    if(m < 1){ m = 12; a -= 1; }
+    if(a < 2020) break;
+    let res = null;
+    try{ res = await store.get(keyFor(a, m)); } catch(e){ res = null; }
+    if(!res || !res.value) break;
+    catena.push(JSON.parse(res.value));
+  }
+  catena.reverse();
+  let carry = 0;
+  catena.forEach(d=>{
+    const correzioni = parseFloat(d.correzioni) || 0;
+    const provvigioni = parseFloat(d.provvigioni) || 0;
+    const versamento = parseFloat(d.versamento) || 0;
+    const saldoAttuale = carry + correzioni + provvigioni + versamento;
+    carry = saldoAttuale - calcolaSpeseDaRighe(d.rows);
+  });
+  return carry;
 }
 
 async function loadPeriod(){
@@ -781,25 +974,8 @@ async function loadPeriod(){
     inVersamento.value = '';
   }
 
-  // Saldo Mese Precedente: sempre uguale alla Differenza del mese/anno precedente
-  let prevMese = mese - 1;
-  let prevAnno = anno;
-  if(prevMese < 1){ prevMese = 12; prevAnno -= 1; }
-  let prevDifferenza = 0;
-  try{
-    const prevRes = await store.get(keyFor(prevAnno, prevMese), false);
-    if(prevRes && prevRes.value){
-      const prevData = JSON.parse(prevRes.value);
-      const prevSaldoPrec = parseFloat(prevData.saldoPrecedente) || 0;
-      const prevCorrezioni = parseFloat(prevData.correzioni) || 0;
-      const prevProvvigioni = parseFloat(prevData.provvigioni) || 0;
-      const prevVersamento = parseFloat(prevData.versamento) || 0;
-      const prevSaldoAttuale = prevSaldoPrec + prevCorrezioni + prevProvvigioni + prevVersamento;
-      const prevSpese = (prevData.rows||[]).reduce((s,r)=> s + (parseFloat(r.importo)||0), 0);
-      prevDifferenza = prevSaldoAttuale - prevSpese;
-    }
-  } catch(e){ /* nessun mese precedente salvato: si parte da zero */ }
-  saldoPrecCorrente = prevDifferenza;
+  // Saldo Mese Precedente: ricalcolato da zero risalendo la catena, mai da cache
+  saldoPrecCorrente = await calcolaSaldoPrecedente(anno, mese);
   valSaldoPrec.textContent = formatEuro(saldoPrecCorrente);
 
   recalc();
@@ -838,6 +1014,19 @@ function startApp(){
   loadPeriod();
   selAnno.addEventListener('change', loadPeriod);
   selMese.addEventListener('change', loadPeriod);
+  document.getElementById('btn-refresh-saldo').addEventListener('click', ()=>{
+    loadPeriod();
+  });
+  document.getElementById('btn-ricalcola-anno').addEventListener('click', async ()=>{
+    const btn = document.getElementById('btn-ricalcola-anno');
+    const anno = parseInt(selAnno.value);
+    btn.disabled = true;
+    btn.textContent = '↻ Ricalcolo in corso…';
+    await ricalcolaCatenaAnno(anno);
+    btn.disabled = false;
+    btn.textContent = '↻ Ricalcola tutto l\'anno';
+    await loadPeriod();
+  });
   inCorrezioni.addEventListener('focus', ()=>{
     const raw = parseEuro(inCorrezioni.value);
     inCorrezioni.value = isNaN(raw) ? '' : String(raw).replace('.', ',');
@@ -867,6 +1056,106 @@ function startApp(){
   });
   [inCorrezioni, inProvvigioni, inVersamento].forEach(inp=>{
     inp.addEventListener('input', ()=>{ recalc(); queueSave(); });
+  });
+
+  selRiepilogoAnno.addEventListener('change', ()=>{
+    const anno = selRiepilogoAnno.value;
+    if(anno){ showRiepilogo(parseInt(anno)); }
+  });
+  document.getElementById('riepilogo-back').addEventListener('click', ()=>{
+    riepilogoView.style.display = 'none';
+    mainContent.style.display = 'block';
+    controlliMese.style.display = 'contents';
+    selRiepilogoAnno.value = '';
+  });
+}
+
+async function ricalcolaCatenaAnno(anno){
+  // Base di partenza: risale la catena all'indietro fino a un mese senza dati
+  let carry = await calcolaSaldoPrecedente(anno, 1);
+
+  for(let m=1; m<=12; m++){
+    const k = keyFor(anno, m);
+    try{
+      const res = await store.get(k);
+      if(res && res.value){
+        const d = JSON.parse(res.value);
+        d.saldoPrecedente = String(carry);
+        const correzioni = parseFloat(d.correzioni) || 0;
+        const provvigioni = parseFloat(d.provvigioni) || 0;
+        const versamento = parseFloat(d.versamento) || 0;
+        const saldoAttuale = carry + correzioni + provvigioni + versamento;
+        const spese = calcolaSpeseDaRighe(d.rows);
+        const differenza = saldoAttuale - spese;
+        await store.set(k, JSON.stringify(d));
+        carry = differenza;
+      }
+      // se il mese non ha dati salvati, il valore resta invariato: non c'è nulla da ricalcolare
+    } catch(e){ /* mese non trovato, prosegue con il successivo */ }
+  }
+}
+
+async function showRiepilogo(anno){
+  mainContent.style.display = 'none';
+  controlliMese.style.display = 'none';
+  riepilogoView.style.display = 'block';
+  riepilogoTitolo.textContent = `Riepilogo Anno ${anno}`;
+  riepilogoBody.innerHTML = '<p style="color:#a9bccf; text-align:center; padding:20px;">Caricamento…</p>';
+
+  let carry = await calcolaSaldoPrecedente(anno, 1);
+  const righe = [];
+  for(let m=1; m<=12; m++){
+    let riga = null;
+    try{
+      const res = await store.get(keyFor(anno, m));
+      if(res && res.value){
+        const d = JSON.parse(res.value);
+        const correzioni = parseFloat(d.correzioni) || 0;
+        const provvigioni = parseFloat(d.provvigioni) || 0;
+        const versamento = parseFloat(d.versamento) || 0;
+        const saldoAttuale = carry + correzioni + provvigioni + versamento;
+        const spese = calcolaSpeseDaRighe(d.rows);
+        const differenza = saldoAttuale - spese;
+        riga = { saldoAttuale, versamento, spese, provvigioni, differenza };
+        carry = differenza;
+      }
+    } catch(e){ riga = null; }
+    righe.push(riga);
+  }
+
+  riepilogoBody.innerHTML = '';
+  righe.forEach((riga, idx)=>{
+    const mese = document.createElement('div');
+    mese.className = 'riepilogo-mese';
+    const nomeMese = MESI[idx].toUpperCase();
+    if(!riga){
+      mese.innerHTML = `
+        <div class="riepilogo-grid">
+          <div class="riepilogo-box box-mese"><div class="value">${nomeMese}</div></div>
+          <div class="riepilogo-box vuoto box-saldo-attuale"><label>SALDO PRIMO DEL MESE SU C/C</label><div class="value">—</div></div>
+          <div class="riepilogo-box vuoto"><label>Versamento su C/C</label><div class="value">—</div></div>
+          <div class="riepilogo-box vuoto box-spese"><label>Spese</label><div class="value">—</div></div>
+          <div class="riepilogo-box vuoto"><label>Provvigioni</label><div class="value">—</div></div>
+          <div class="riepilogo-box vuoto"><label>SALDO ULTIMO DEL MESE</label><div class="value">—</div></div>
+        </div>
+      `;
+    } else {
+      const box = (label, val)=>{
+        const negativo = val < 0 ? ' negativo' : '';
+        return `<div class="riepilogo-box${negativo}"><label>${label}</label><div class="value">${formatEuro(val)}</div></div>`;
+      };
+      mese.innerHTML = `
+        <div class="riepilogo-grid">
+          <div class="riepilogo-box box-mese"><div class="value">${nomeMese}</div></div>
+          <div class="riepilogo-box box-saldo-attuale${riga.saldoAttuale < 0 ? ' negativo' : ''}"><label>SALDO PRIMO DEL MESE SU C/C</label><div class="value">${formatEuro(riga.saldoAttuale)}</div></div>
+          ${box('Versamento su C/C', riga.versamento)}
+          <div class="riepilogo-box box-spese${riga.spese < 0 ? ' negativo' : ''}"><label>Spese</label><div class="value">${formatEuro(riga.spese)}</div></div>
+          ${box('Provvigioni', riga.provvigioni)}
+          ${box('SALDO ULTIMO DEL MESE', riga.differenza)}
+        </div>
+      `;
+    }
+    riepilogoBody.appendChild(mese);
   });
 }
 

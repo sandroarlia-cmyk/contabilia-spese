@@ -206,51 +206,28 @@
   }
 
   .riepilogo-header{
-    display:flex; align-items:center; justify-content:space-between; margin-bottom: 22px; padding: 0 2px;
+    display:flex; align-items:center; justify-content:space-between; margin-bottom: 18px; padding: 0 2px;
   }
   .riepilogo-header h2{ color:#f2ede0; font-size: 19px; }
 
-  .riepilogo-mese{ margin-bottom: 8px; }
-  .riepilogo-grid-wrap{ overflow-x:auto; -webkit-overflow-scrolling:touch; padding-bottom: 2px; }
-  .riepilogo-grid{
-    display:grid; grid-template-columns: repeat(6, 1fr); gap: 8px;
+  table.ledger td.riepilogo-mese-cell{
+    background:#fff; border-radius:4px; padding: 11px 6px;
+    font-family:"Fraunces","Georgia",serif; font-weight:700; font-size:14px;
+    color:#fff; background: var(--green-deep); text-align:center;
   }
-  .riepilogo-box{
-    background: #fff; border:1px solid var(--border); border-radius:10px;
-    height: 75px; display:flex; flex-direction:column;
-    align-items:center; justify-content:center; gap:5px; padding: 8px;
+  table.ledger .riepilogo-valore{
+    display:block; background:#fff; border-radius:4px; padding: 11px 6px;
+    font-family:"JetBrains Mono","Courier New",monospace; font-size: 15px; font-weight:700;
+    text-align:right; color: var(--ink); white-space:nowrap;
   }
-  .riepilogo-box label{
-    font-size: 11px; text-transform:uppercase; letter-spacing:0.4px;
-    color: var(--ink-soft); font-weight:700; text-align:center; line-height:1.2;
-  }
-  .riepilogo-box .value{
-    font-family:"JetBrains Mono","Courier New",monospace; font-size: 19px; font-weight:700;
-    white-space:nowrap;
-  }
-  .riepilogo-box.box-mese{ background: var(--green-deep); border-color: var(--green-deep); }
-  .riepilogo-box.box-mese .value{
-    font-family:"Fraunces","Georgia",serif; color:#fff; font-size: 20px; letter-spacing:0.5px;
-  }
-  .riepilogo-box.box-saldo-attuale{ background: #d3ecd6; border-color:#9ccca1; }
-  .riepilogo-box.box-spese{ background: #f9dcd9; border-color:#e3a9a3; }
-  .riepilogo-box.pos .value{ color: var(--green-deep); }
-  .riepilogo-box.neg .value{ color: var(--red-deep); }
-  .riepilogo-box.vuoto .value{ color: var(--ink-soft); font-style:italic; font-size:18px; font-weight:400; }
-  .riepilogo-box.negativo{ background: #fdf6cf; border-color:#e8d98a; }
-  .riepilogo-box.negativo .value{ color: var(--red-deep); font-weight:800; font-size: 22px; }
-
-  @media (max-width:900px){
-    .riepilogo-grid{
-      display:flex; grid-template-columns: unset; gap: 8px;
-    }
-    .riepilogo-box{
-      flex: 0 0 150px; height: 78px;
-    }
-    .riepilogo-box .value{ font-size: 17px; }
-    .riepilogo-box.negativo .value{ font-size: 19px; }
-    .riepilogo-box.vuoto .value{ font-size: 16px; }
-  }
+  table.ledger .riepilogo-valore.vuoto{ color: var(--ink-soft); font-style:italic; font-weight:400; text-align:center; }
+  table.ledger td.riepilogo-saldo-primo .riepilogo-valore{ background:#d3ecd6; }
+  table.ledger td.riepilogo-spese .riepilogo-valore{ background:#f9dcd9; }
+  table.ledger td.riepilogo-saldo-ultimo .riepilogo-valore,
+  table.ledger td.riepilogo-saldo-primo .riepilogo-valore{ font-weight:800; font-size: 18px; }
+  table.ledger .riepilogo-valore.negativo{ background:#fdf6cf; color: var(--red-deep); font-weight:800; font-size:16px; }
+  table.ledger td.riepilogo-saldo-ultimo .riepilogo-valore.negativo,
+  table.ledger td.riepilogo-saldo-primo .riepilogo-valore.negativo{ font-size: 19px; }
 
   @media (max-width:700px){
     .row-controls{ justify-content:center; }
@@ -364,7 +341,21 @@
       <h2 id="riepilogo-titolo">Riepilogo Anno</h2>
       <button class="logout-btn" id="riepilogo-back">← Torna alla contabilità</button>
     </div>
-    <div id="riepilogo-body"></div>
+    <div class="ledger-wrap">
+      <table class="ledger">
+        <thead>
+          <tr>
+            <th>Mese</th>
+            <th>Saldo Primo del Mese su C/C</th>
+            <th>Saldo Ultimo del Mese C/C</th>
+            <th>Versamento su C/C</th>
+            <th>Spese</th>
+            <th>Provvigioni</th>
+          </tr>
+        </thead>
+        <tbody id="riepilogo-body"></tbody>
+      </table>
+    </div>
   </div>
 </div>
 
@@ -1109,7 +1100,7 @@ async function showRiepilogo(anno){
   controlliMese.style.display = 'none';
   riepilogoView.style.display = 'block';
   riepilogoTitolo.textContent = `Riepilogo Anno ${anno}`;
-  riepilogoBody.innerHTML = '<p style="color:#a9bccf; text-align:center; padding:20px;">Caricamento…</p>';
+  riepilogoBody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:20px; color:var(--ink-soft); font-style:italic; background:transparent;">Caricamento…</td></tr>';
 
   let carry = await calcolaSaldoPrecedente(anno, 1);
   const righe = [];
@@ -1134,37 +1125,29 @@ async function showRiepilogo(anno){
 
   riepilogoBody.innerHTML = '';
   righe.forEach((riga, idx)=>{
-    const mese = document.createElement('div');
-    mese.className = 'riepilogo-mese';
+    const tr = document.createElement('tr');
     const nomeMese = MESI[idx].toUpperCase();
     if(!riga){
-      mese.innerHTML = `
-        <div class="riepilogo-grid-wrap"><div class="riepilogo-grid">
-          <div class="riepilogo-box box-mese"><div class="value">${nomeMese}</div></div>
-          <div class="riepilogo-box vuoto box-saldo-attuale"><label>SALDO PRIMO DEL MESE SU C/C</label><div class="value">—</div></div>
-          <div class="riepilogo-box vuoto"><label>Versamento su C/C</label><div class="value">—</div></div>
-          <div class="riepilogo-box vuoto box-spese"><label>Spese</label><div class="value">—</div></div>
-          <div class="riepilogo-box vuoto"><label>Provvigioni</label><div class="value">—</div></div>
-          <div class="riepilogo-box vuoto"><label>SALDO ULTIMO DEL MESE</label><div class="value">—</div></div>
-        </div></div>
+      tr.innerHTML = `
+        <td class="riepilogo-mese-cell">${nomeMese}</td>
+        <td class="riepilogo-saldo-primo"><span class="riepilogo-valore vuoto">—</span></td>
+        <td class="riepilogo-saldo-ultimo"><span class="riepilogo-valore vuoto">—</span></td>
+        <td><span class="riepilogo-valore vuoto">—</span></td>
+        <td class="riepilogo-spese"><span class="riepilogo-valore vuoto">—</span></td>
+        <td><span class="riepilogo-valore vuoto">—</span></td>
       `;
     } else {
-      const box = (label, val)=>{
-        const negativo = val < 0 ? ' negativo' : '';
-        return `<div class="riepilogo-box${negativo}"><label>${label}</label><div class="value">${formatEuro(val)}</div></div>`;
-      };
-      mese.innerHTML = `
-        <div class="riepilogo-grid-wrap"><div class="riepilogo-grid">
-          <div class="riepilogo-box box-mese"><div class="value">${nomeMese}</div></div>
-          <div class="riepilogo-box box-saldo-attuale${riga.saldoAttuale < 0 ? ' negativo' : ''}"><label>SALDO PRIMO DEL MESE SU C/C</label><div class="value">${formatEuro(riga.saldoAttuale)}</div></div>
-          ${box('Versamento su C/C', riga.versamento)}
-          <div class="riepilogo-box box-spese${riga.spese < 0 ? ' negativo' : ''}"><label>Spese</label><div class="value">${formatEuro(riga.spese)}</div></div>
-          ${box('Provvigioni', riga.provvigioni)}
-          ${box('SALDO ULTIMO DEL MESE', riga.differenza)}
-        </div></div>
+      const cella = (val)=> `<span class="riepilogo-valore${val < 0 ? ' negativo' : ''}">${formatEuro(val)}</span>`;
+      tr.innerHTML = `
+        <td class="riepilogo-mese-cell">${nomeMese}</td>
+        <td class="riepilogo-saldo-primo">${cella(riga.saldoAttuale)}</td>
+        <td class="riepilogo-saldo-ultimo">${cella(riga.differenza)}</td>
+        <td>${cella(riga.versamento)}</td>
+        <td class="riepilogo-spese">${cella(riga.spese)}</td>
+        <td>${cella(riga.provvigioni)}</td>
       `;
     }
-    riepilogoBody.appendChild(mese);
+    riepilogoBody.appendChild(tr);
   });
 }
 

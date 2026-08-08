@@ -211,6 +211,7 @@
   .riepilogo-header h2{ color:#f2ede0; font-size: 19px; }
 
   .riepilogo-mese{ margin-bottom: 8px; }
+  .riepilogo-grid-wrap{ overflow-x:auto; -webkit-overflow-scrolling:touch; padding-bottom: 2px; }
   .riepilogo-grid{
     display:grid; grid-template-columns: repeat(6, 1fr); gap: 8px;
   }
@@ -225,6 +226,7 @@
   }
   .riepilogo-box .value{
     font-family:"JetBrains Mono","Courier New",monospace; font-size: 19px; font-weight:700;
+    white-space:nowrap;
   }
   .riepilogo-box.box-mese{ background: var(--green-deep); border-color: var(--green-deep); }
   .riepilogo-box.box-mese .value{
@@ -239,8 +241,15 @@
   .riepilogo-box.negativo .value{ color: var(--red-deep); font-weight:800; font-size: 22px; }
 
   @media (max-width:900px){
-    .riepilogo-grid{ grid-template-columns: repeat(3,1fr); }
-    .riepilogo-box{ height: 65px; }
+    .riepilogo-grid{
+      display:flex; grid-template-columns: unset; gap: 8px;
+    }
+    .riepilogo-box{
+      flex: 0 0 150px; height: 78px;
+    }
+    .riepilogo-box .value{ font-size: 17px; }
+    .riepilogo-box.negativo .value{ font-size: 19px; }
+    .riepilogo-box.vuoto .value{ font-size: 16px; }
   }
 
   @media (max-width:700px){
@@ -1130,14 +1139,14 @@ async function showRiepilogo(anno){
     const nomeMese = MESI[idx].toUpperCase();
     if(!riga){
       mese.innerHTML = `
-        <div class="riepilogo-grid">
+        <div class="riepilogo-grid-wrap"><div class="riepilogo-grid">
           <div class="riepilogo-box box-mese"><div class="value">${nomeMese}</div></div>
           <div class="riepilogo-box vuoto box-saldo-attuale"><label>SALDO PRIMO DEL MESE SU C/C</label><div class="value">—</div></div>
           <div class="riepilogo-box vuoto"><label>Versamento su C/C</label><div class="value">—</div></div>
           <div class="riepilogo-box vuoto box-spese"><label>Spese</label><div class="value">—</div></div>
           <div class="riepilogo-box vuoto"><label>Provvigioni</label><div class="value">—</div></div>
           <div class="riepilogo-box vuoto"><label>SALDO ULTIMO DEL MESE</label><div class="value">—</div></div>
-        </div>
+        </div></div>
       `;
     } else {
       const box = (label, val)=>{
@@ -1145,14 +1154,14 @@ async function showRiepilogo(anno){
         return `<div class="riepilogo-box${negativo}"><label>${label}</label><div class="value">${formatEuro(val)}</div></div>`;
       };
       mese.innerHTML = `
-        <div class="riepilogo-grid">
+        <div class="riepilogo-grid-wrap"><div class="riepilogo-grid">
           <div class="riepilogo-box box-mese"><div class="value">${nomeMese}</div></div>
           <div class="riepilogo-box box-saldo-attuale${riga.saldoAttuale < 0 ? ' negativo' : ''}"><label>SALDO PRIMO DEL MESE SU C/C</label><div class="value">${formatEuro(riga.saldoAttuale)}</div></div>
           ${box('Versamento su C/C', riga.versamento)}
           <div class="riepilogo-box box-spese${riga.spese < 0 ? ' negativo' : ''}"><label>Spese</label><div class="value">${formatEuro(riga.spese)}</div></div>
           ${box('Provvigioni', riga.provvigioni)}
           ${box('SALDO ULTIMO DEL MESE', riga.differenza)}
-        </div>
+        </div></div>
       `;
     }
     riepilogoBody.appendChild(mese);

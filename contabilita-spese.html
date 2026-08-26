@@ -143,6 +143,7 @@
   .summary-box.pos .value{ color: var(--green-deep); }
   .summary-box.neg .value{ color: var(--red-deep); }
   .summary-box.box-spese{ background: #f9dcd9; border-color:#e3a9a3; }
+  .summary-box.box-saldo-ultimo{ background: #d3ecd6; border-color:#9ccca1; }
   .summary-box.negativo{ background: #fdf6cf; border-color:#e8d98a; }
   .summary-box.negativo .value{ color: var(--red-deep); font-weight:800; font-size: 26px; }
 
@@ -305,10 +306,6 @@
       <label>Spese</label>
       <div class="value" id="val-spese">0,00</div>
     </div>
-    <div class="summary-box" id="box-banca">
-      <label>SALDO PRIMO DEL MESE</label>
-      <div class="value" id="val-banca">0,00</div>
-    </div>
     <div class="summary-box">
       <label>Provvigioni</label>
       <input type="text" inputmode="decimal" id="in-provvigioni" class="value-input" placeholder="€ 0,00">
@@ -317,7 +314,11 @@
       <label>Versamento su C/C</label>
       <input type="text" inputmode="decimal" id="in-versamento" class="value-input" placeholder="€ 0,00">
     </div>
-    <div class="summary-box" id="box-differenza">
+    <div class="summary-box" id="box-banca">
+      <label>SALDO PRIMO DEL MESE</label>
+      <div class="value" id="val-banca">0,00</div>
+    </div>
+    <div class="summary-box box-saldo-ultimo" id="box-differenza">
       <label>SALDO ULTIMO DEL MESE</label>
       <div class="value" id="val-differenza">0,00</div>
     </div>

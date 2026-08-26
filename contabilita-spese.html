@@ -230,8 +230,11 @@
   table.ledger td.riepilogo-saldo-primo .riepilogo-valore.negativo{ font-size: 19px; }
 
   @media (max-width:700px){
-    .row-controls{ justify-content:center; }
-    .ctrl-box{ min-width: 100px; }
+    .row-controls{
+      display:grid; grid-template-columns: repeat(2, 1fr); gap: 12px;
+      justify-content:stretch;
+    }
+    .ctrl-box{ min-width: 0; width:100%; }
     .row-summary{ grid-template-columns: repeat(2,1fr); }
     .row-summary .summary-box:last-child{ grid-column: span 2; }
     table.ledger{ min-width: 620px; }

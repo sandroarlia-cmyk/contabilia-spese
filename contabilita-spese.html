@@ -4,7 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Contabilità Spese</title>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
 <style>
   :root{
     --bg: #10233b;
@@ -374,24 +375,29 @@ let saveTimer = null;
 let suppressSave = false;
 
 // ==========================================================
-// CONFIGURAZIONE SUPABASE — incolla qui i dati del tuo progetto
-// (li trovi su supabase.com > il tuo progetto > Settings > API)
+// CONFIGURAZIONE FIREBASE — incolla qui i dati del tuo progetto
+// (li trovi su console.firebase.google.com > Impostazioni progetto)
 // ==========================================================
-const SUPABASE_CONFIG = {
-  url: "https://wpocqesnanardbgbgras.supabase.co",
-  anonKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indwb2NxZXNuYW5hcmRiZ2JncmFzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYwMzMwNjgsImV4cCI6MjEwMTYwOTA2OH0.YC0JaXg5l2vvl_CntQmUv4y0-LISzDMb-UMPzEfYOdA"
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyChGE09232aQU_Z1Lc25870P9KmsndCub8",
+  authDomain: "contabilita-spese.firebaseapp.com",
+  projectId: "contabilita-spese",
+  storageBucket: "contabilita-spese.firebasestorage.app",
+  messagingSenderId: "157781838861",
+  appId: "1:157781838861:web:c130220e617259d93e5944"
 };
 // ==========================================================
 
 // Adapter di salvataggio a 3 livelli:
 // 1) window.storage se la pagina gira dentro Claude.ai
-// 2) Supabase se è stata configurata la sezione sopra (sito pubblicato)
+// 2) Firebase Firestore se è stata configurata la sezione sopra (sito pubblicato)
 // 3) localStorage come ultima spiaggia (solo su questo browser)
 const hasCloudStorage = (typeof window.storage !== 'undefined' && window.storage && typeof window.storage.get === 'function');
-const supabaseConfigured = SUPABASE_CONFIG.url && SUPABASE_CONFIG.url !== 'INSERISCI_QUI';
-let sb = null;
-if(!hasCloudStorage && supabaseConfigured && typeof supabase !== 'undefined'){
-  sb = supabase.createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.anonKey);
+const firebaseConfigured = FIREBASE_CONFIG.apiKey && FIREBASE_CONFIG.apiKey !== 'INSERISCI_QUI';
+let db = null;
+if(!hasCloudStorage && firebaseConfigured && typeof firebase !== 'undefined'){
+  firebase.initializeApp(FIREBASE_CONFIG);
+  db = firebase.firestore();
 }
 
 const store = {
@@ -399,10 +405,10 @@ const store = {
     if(hasCloudStorage){
       return await window.storage.get(key, false);
     }
-    if(sb){
-      const { data, error } = await sb.from('contabilita_spese').select('value').eq('key', key).maybeSingle();
-      if(error || !data){ throw new Error('not found'); }
-      return { key, value: data.value };
+    if(db){
+      const doc = await db.collection('contabilita_spese').doc(key).get();
+      if(!doc.exists){ throw new Error('not found'); }
+      return { key, value: doc.data().value };
     }
     const v = localStorage.getItem(key);
     if(v === null){ throw new Error('not found'); }
@@ -412,9 +418,8 @@ const store = {
     if(hasCloudStorage){
       return await window.storage.set(key, value, false);
     }
-    if(sb){
-      const { error } = await sb.from('contabilita_spese').upsert({ key, value });
-      if(error) throw error;
+    if(db){
+      await db.collection('contabilita_spese').doc(key).set({ value });
       return { key, value };
     }
     localStorage.setItem(key, value);
@@ -424,10 +429,14 @@ const store = {
     if(hasCloudStorage){
       return await window.storage.list(prefix, false);
     }
-    if(sb){
-      const { data, error } = await sb.from('contabilita_spese').select('key').like('key', prefix + '%');
-      if(error) throw error;
-      return { keys: (data || []).map(d => d.key) };
+    if(db){
+      const snapshot = await db.collection('contabilita_spese')
+        .where(firebase.firestore.FieldPath.documentId(), '>=', prefix)
+        .where(firebase.firestore.FieldPath.documentId(), '<', prefix + '\uf8ff')
+        .get();
+      const keys = [];
+      snapshot.forEach(d => keys.push(d.id));
+      return { keys };
     }
     const keys = [];
     for(let i=0;i<localStorage.length;i++){

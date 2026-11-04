@@ -87,6 +87,16 @@
     display:flex; justify-content:flex-end; gap:12px; flex-wrap:wrap; margin-bottom:16px;
   }
   .ctrl-box{ display:flex; flex-direction:column; gap:6px; min-width:130px; }
+  /* le due file di riquadri usano la stessa griglia a 5 colonne dei riquadri di riepilogo */
+  .row-controls.row-viste, .row-controls.row-mese{
+    display:grid; grid-template-columns: repeat(5, 1fr); gap:14px; justify-content:stretch;
+  }
+  .row-controls .ctrl-box{ min-width:0; width:100%; }
+  #controlli-mese{ display:contents; }
+  .row-viste .ctrl-presunte{ grid-column:4; }
+  .row-viste .ctrl-fisse{ grid-column:5; }
+  .row-mese .ctrl-riepilogo{ grid-column:5; }
+  .row-controls .ctrl-box select.sf-box-select#sel-presunte{ min-width:0; font-size:10px; padding-left:2px; padding-right:2px; }
   .ctrl-box label{
     font-size: 10px; text-transform:uppercase; letter-spacing: 0.2px;
     color:#a9bccf; font-weight:600; text-align:center;
@@ -377,8 +387,11 @@
       justify-content:stretch;
     }
     .ctrl-box{ min-width: 0; width:100%; }
-    .row-viste .ctrl-box:last-child{ grid-column: span 2; }
-    .ctrl-box select.sf-box-select#sel-presunte{ font-size:10px; min-width:0; padding-left:4px; padding-right:18px; }
+    .row-controls.row-viste, .row-controls.row-mese{ grid-template-columns: repeat(2, 1fr); }
+    .row-viste .ctrl-presunte, .row-viste .ctrl-fisse, .row-mese .ctrl-riepilogo{ grid-column:auto; }
+    .row-mese .ctrl-riepilogo{ grid-column: span 2; }
+    .row-controls .ctrl-box select.sf-box-select{ font-size:11.5px; padding-left:3px; padding-right:3px; }
+    .row-controls .ctrl-box select.sf-box-select#sel-presunte{ font-size:9.5px; }
     .row-summary{ grid-template-columns: repeat(2,1fr); }
     .row-summary .summary-box:last-child{ grid-column: span 2; }
     table.ledger{ min-width: 620px; }
@@ -430,19 +443,13 @@
   </div>
 
   <div class="row-controls row-viste">
-    <div class="ctrl-box">
-      <label>Riepilogo Anno</label>
-      <select id="sel-riepilogo-anno">
-        <option value="">— seleziona —</option>
-      </select>
-    </div>
-    <div class="ctrl-box">
+    <div class="ctrl-box ctrl-presunte">
       <label>&nbsp;</label>
       <select id="sel-presunte" class="sf-box-select">
         <option value="">Spese presunte anno successivo</option>
       </select>
     </div>
-    <div class="ctrl-box">
+    <div class="ctrl-box ctrl-fisse">
       <label>&nbsp;</label>
       <select id="sel-spese-fisse" class="sf-box-select">
         <option value="">Riepilogo Spese Fisse</option>
@@ -450,22 +457,30 @@
     </div>
   </div>
 
-  <div class="row-controls" id="controlli-mese">
-    <div class="ctrl-box">
-      <label>Anno</label>
-      <select id="sel-anno"></select>
+  <div class="row-controls row-mese">
+    <div id="controlli-mese">
+      <div class="ctrl-box">
+        <label>Anno</label>
+        <select id="sel-anno"></select>
+      </div>
+      <div class="ctrl-box">
+        <label>Mese</label>
+        <select id="sel-mese"></select>
+      </div>
+      <div class="ctrl-box">
+        <label>Correzioni C/C</label>
+        <input type="text" inputmode="decimal" id="in-correzioni" placeholder="€ 0,00">
+      </div>
+      <div class="ctrl-box">
+        <label>Saldo Mese Precedente <button type="button" id="btn-refresh-saldo" class="refresh-btn" title="Ricalcola">⟳</button></label>
+        <div class="value" id="val-saldo-precedente">€ 0,00</div>
+      </div>
     </div>
-    <div class="ctrl-box">
-      <label>Mese</label>
-      <select id="sel-mese"></select>
-    </div>
-    <div class="ctrl-box">
-      <label>Correzioni C/C</label>
-      <input type="text" inputmode="decimal" id="in-correzioni" placeholder="€ 0,00">
-    </div>
-    <div class="ctrl-box">
-      <label>Saldo Mese Precedente <button type="button" id="btn-refresh-saldo" class="refresh-btn" title="Ricalcola">⟳</button></label>
-      <div class="value" id="val-saldo-precedente">€ 0,00</div>
+    <div class="ctrl-box ctrl-riepilogo">
+      <label>Riepilogo Anno</label>
+      <select id="sel-riepilogo-anno">
+        <option value="">— seleziona —</option>
+      </select>
     </div>
   </div>
 

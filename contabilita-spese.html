@@ -293,6 +293,26 @@
   
 
   #app.largo{ max-width:none; }
+  .ctrl-box select.sf-box-select#sel-presunte{ font-size:12.5px; min-width:150px; }
+  .pr-voce{
+    width:76px; height:64px; box-sizing:border-box; background:#fff; color:var(--green-deep); border:none; border-radius:6px;
+    padding:5px 3px; font-family:inherit; font-weight:700; font-size:11px; line-height:1.25; text-align:center;
+    resize:none; overflow:hidden; display:block; margin:0 auto;
+  }
+  .pr-voce::placeholder{ color:#b5bdc6; font-weight:400; }
+  .pr-voce:focus, .pr-cell:focus{ outline:2px solid var(--gold); outline-offset:-1px; }
+  table.ledger.presunte-table td input.pr-cell{
+    width:100%; box-sizing:border-box; background:#fff; border:1.5px solid var(--green-deep); border-radius:6px;
+    padding:8px 3px; text-align:right; font-family:"JetBrains Mono","Courier New",monospace; font-weight:800; font-size:12px; color:#000; min-width:0; height:auto;
+  }
+  table.ledger.presunte-table td input.pr-cell:placeholder-shown{ border:1px solid var(--border); font-weight:400; }
+  .pr-calc{
+    box-sizing:border-box; background:#f9dcd9; border:1.5px solid var(--green-deep); border-radius:6px; padding:8px 6px; text-align:right;
+    font-family:"JetBrains Mono","Courier New",monospace; font-weight:800; font-size:14px; color:#000; white-space:nowrap;
+  }
+  .pr-calc.vuoto{ font-weight:400; border:1px solid var(--border); text-align:center; }
+  table.ledger.presunte-table td.sf-provv input.pr-cell{ font-size:13px; padding-left:6px; padding-right:6px; }
+  .sf-azioni .status{ align-self:center; }
   .sf-azioni{ display:flex; gap:10px; flex-wrap:wrap; }
   .logout-btn.sf-export{ border-color: var(--gold); color:#f2d98a; font-weight:700; }
   .ricalcola-top{ display:flex; justify-content:flex-end; margin-bottom:14px; }
@@ -340,10 +360,10 @@
 <datalist id="elenco-voci"></datalist>
 <div id="conferma-overlay">
   <div class="conferma-box" role="dialog" aria-modal="true">
-    <h3>Stai per effettuare una modifica</h3>
-    <p>Stai cambiando il nome di una voce di spesa:</p>
+    <h3 id="conferma-titolo">Stai per effettuare una modifica</h3>
+    <p id="conferma-t1">Stai cambiando il nome di una voce di spesa:</p>
     <div class="conferma-nomi" id="conferma-nomi"></div>
-    <p style="margin-top:10px;">Nel Riepilogo Spese Fisse l'importo passerà alla colonna con il nuovo nome (se la colonna vecchia non serve più, sparisce).</p>
+    <p id="conferma-t2" style="margin-top:10px;">Nel Riepilogo Spese Fisse l'importo passerà alla colonna con il nuovo nome (se la colonna vecchia non serve più, sparisce).</p>
     <div class="conferma-btns">
       <button type="button" id="conferma-annulla">Annulla<br><span style="font-weight:400;font-size:12px;">annulla operazione</span></button>
       <button type="button" id="conferma-ok">OK<br><span style="font-weight:400;font-size:12px;">procedi</span></button>
@@ -404,6 +424,12 @@
       <label>&nbsp;</label>
       <select id="sel-spese-fisse" class="sf-box-select">
         <option value="">Riepilogo Spese Fisse</option>
+      </select>
+    </div>
+    <div class="ctrl-box">
+      <label>&nbsp;</label>
+      <select id="sel-presunte" class="sf-box-select">
+        <option value="">Spese presunte anno successivo</option>
       </select>
     </div>
   </div>
@@ -469,6 +495,26 @@
           </tr>
         </thead>
         <tbody id="riepilogo-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div id="presunte-view" style="display:none;">
+    <div class="riepilogo-header">
+      <h2 id="presunte-titolo">Spese presunte</h2>
+      <div class="sf-azioni">
+        <span class="status" id="presunte-status"></span>
+        <button class="logout-btn" id="presunte-add-col" type="button">＋ Aggiungi colonna</button>
+        <button class="logout-btn" id="presunte-ricopia" type="button">↺ Ricopia dal Riepilogo Spese Fisse</button>
+        <button class="logout-btn sf-export" id="presunte-export" type="button">⬇ Esporta in Excel</button>
+        <button class="logout-btn" id="presunte-back" type="button">← Torna alla contabilità</button>
+      </div>
+    </div>
+    <p class="sf-nota" id="presunte-nota">Foglio libero: scrivi e modifica dove vuoi. Non è collegato alle altre schede e non cambia nessun dato. I totali si calcolano da soli.</p>
+    <div class="ledger-wrap">
+      <table class="ledger spese-fisse-table presunte-table">
+        <thead id="presunte-head"></thead>
+        <tbody id="presunte-body"></tbody>
       </table>
     </div>
   </div>
@@ -707,6 +753,11 @@ const riepilogoView = document.getElementById('riepilogo-view');
 const riepilogoTitolo = document.getElementById('riepilogo-titolo');
 const riepilogoBody = document.getElementById('riepilogo-body');
 const selSpeseFisse = document.getElementById('sel-spese-fisse');
+const selPresunte = document.getElementById('sel-presunte');
+const presunteView = document.getElementById('presunte-view');
+const presunteTitolo = document.getElementById('presunte-titolo');
+const presunteHead = document.getElementById('presunte-head');
+const presunteBody = document.getElementById('presunte-body');
 const speseFisseView = document.getElementById('spese-fisse-view');
 const speseFisseTitolo = document.getElementById('spese-fisse-titolo');
 const speseFisseHead = document.getElementById('spese-fisse-head');
@@ -728,6 +779,10 @@ function buildSelectors(){
     const optS = document.createElement('option');
     optS.value = y; optS.textContent = y;
     selSpeseFisse.appendChild(optS);
+
+    const optP = document.createElement('option');
+    optP.value = y; optP.textContent = y;
+    selPresunte.appendChild(optP);
   }
   MESI.forEach((m, i)=>{
     const opt = document.createElement('option');
@@ -781,6 +836,9 @@ function chiediConferma(){ return new Promise(res=>{
   annB.focus();
 }); }
 function chiediConfermaRinomina(prima, dopo){
+  document.getElementById('conferma-titolo').textContent = 'Stai per effettuare una modifica';
+  document.getElementById('conferma-t1').textContent = 'Stai cambiando il nome di una voce di spesa:';
+  document.getElementById('conferma-t2').textContent = "Nel Riepilogo Spese Fisse l'importo passerà alla colonna con il nuovo nome (se la colonna vecchia non serve più, sparisce).";
   document.getElementById('conferma-nomi').innerHTML =
     `Da: <b>${escapeHtml(prima)}</b><br>A: <b>${escapeHtml(dopo || '(vuoto)')}</b>`;
   return chiediConferma();
@@ -1286,7 +1344,16 @@ function startApp(){
     controlliMese.style.display = 'contents';
     selRiepilogoAnno.value = '';
     selSpeseFisse.value = '';
+    nascondiPresunte();
   }
+  selPresunte.addEventListener('change', ()=>{
+    const anno = selPresunte.value;
+    if(anno){ showPresunte(parseInt(anno)); }
+  });
+  document.getElementById('presunte-back').addEventListener('click', tornaAllaContabilita);
+  document.getElementById('presunte-export').addEventListener('click', esportaPresunte);
+  document.getElementById('presunte-add-col').addEventListener('click', aggiungiColonnaPresunte);
+  document.getElementById('presunte-ricopia').addEventListener('click', ricopiaPresunte);
   document.getElementById('riepilogo-back').addEventListener('click', tornaAllaContabilita);
   document.getElementById('spese-fisse-back').addEventListener('click', tornaAllaContabilita);
   document.getElementById('spese-fisse-export').addEventListener('click', esportaSpeseFisse);
@@ -1340,24 +1407,7 @@ function raggruppaVociMese(rows){
   return voci;
 }
 
-let datiSpeseFisse = null;
-
-function esportaSpeseFisse(){
-  const d = datiSpeseFisse;
-  if(!d){ alert('Apri prima un anno nel Riepilogo Spese Fisse.'); return; }
-  const intest = ['Mese', ...d.colonne, 'Totale spese del mese', 'Provvigioni'];
-  const righe = [intest];
-  d.mesi.forEach((ms, idx)=>{
-    righe.push([
-      MESI[idx],
-      ...d.chiavi.map(k => { const v = ms.voci.find(x => x.chiave === k); return v ? Math.round(v.somma*100)/100 : null; }),
-      ms.dati ? Math.round(ms.totale*100)/100 : null,
-      ms.provv !== null ? Math.round(ms.provv*100)/100 : null
-    ]);
-  });
-  righe.push(['TOTALE ANNO', ...d.chiavi.map(()=>null), Math.round(d.sommaTot*100)/100, Math.round(d.sommaProv*100)/100]);
-  const nome = `Riepilogo_Spese_Fisse_${d.anno}`;
-
+function scaricaTabella(nome, intest, righe){
   if(window.XLSX){
     const ws = XLSX.utils.aoa_to_sheet(righe);
     const rif = XLSX.utils.decode_range(ws['!ref']);
@@ -1369,7 +1419,7 @@ function esportaSpeseFisse(){
     }
     ws['!cols'] = intest.map((t, i)=> ({ wch: i === 0 ? 14 : Math.max(12, Math.min(28, String(t).length + 2)) }));
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Spese Fisse ' + d.anno);
+    XLSX.utils.book_append_sheet(wb, ws, nome.replace(/_/g, ' ').slice(0, 31));
     XLSX.writeFile(wb, nome + '.xlsx');
   } else {
     // alternativa: CSV (si apre in Excel; separatore ; e virgola decimale)
@@ -1387,7 +1437,268 @@ function esportaSpeseFisse(){
   }
 }
 
+let datiSpeseFisse = null;
+
+function esportaSpeseFisse(){
+  const d = datiSpeseFisse;
+  if(!d){ alert('Apri prima un anno nel Riepilogo Spese Fisse.'); return; }
+  const intest = ['Mese', ...d.colonne, 'Totale spese del mese', 'Provvigioni'];
+  const righe = [intest];
+  d.mesi.forEach((ms, idx)=>{
+    righe.push([
+      MESI[idx],
+      ...d.chiavi.map(k => { const v = ms.voci.find(x => x.chiave === k); return v ? Math.round(v.somma*100)/100 : null; }),
+      ms.dati ? Math.round(ms.totale*100)/100 : null,
+      ms.provv !== null ? Math.round(ms.provv*100)/100 : null
+    ]);
+  });
+  righe.push(['TOTALE ANNO', ...d.chiavi.map(()=>null), Math.round(d.sommaTot*100)/100, Math.round(d.sommaProv*100)/100]);
+  scaricaTabella(`Riepilogo_Spese_Fisse_${d.anno}`, intest, righe);
+}
+
+
+// =====================================================
+//  SPESE PRESUNTE ANNO SUCCESSIVO (foglio libero, non sincronizzato)
+// =====================================================
+const PR_MIN_COLONNE = 12;
+let presunteDati = null, presunteAnno = null, presunteTimer = null;
+
+function arrotonda2(n){ return Math.round(n * 100) / 100; }
+
+// Legge il Riepilogo Spese Fisse di un anno (stessa logica della scheda originale)
+async function leggiSpeseFisseAnno(anno){
+  const mesi = [];
+  for(let m=1; m<=12; m++){
+    let voci = [], provv = null;
+    try{
+      const res = await store.get(keyFor(anno, m));
+      if(res && res.value){
+        const d = JSON.parse(res.value);
+        voci = raggruppaVociMese(d.rows);
+        const pv = parseFloat(d.provvigioni);
+        provv = (isNaN(pv) || pv === 0) ? null : pv;
+      }
+    } catch(e){ /* mese vuoto */ }
+    mesi.push({ voci, provv });
+  }
+  const colonne = [];
+  mesi.forEach(ms => ms.voci.forEach(v=>{
+    if(!colonne.find(c => c.chiave === v.chiave)) colonne.push({ chiave: v.chiave, etichetta: v.etichetta });
+  }));
+  return {
+    colonne: colonne.map(c => c.etichetta),
+    celle: mesi.map(ms => colonne.map(c => { const v = ms.voci.find(x => x.chiave === c.chiave); return v ? arrotonda2(v.somma) : null; })),
+    provv: mesi.map(ms => ms.provv === null ? null : arrotonda2(ms.provv))
+  };
+}
+
+function nuovoFoglioDa(src, copiatoDa){
+  const nCol = Math.max(PR_MIN_COLONNE, src.colonne.length + 4);
+  const voci = [], celle = src.celle.map(()=>[]);
+  for(let c=0; c<nCol; c++){
+    voci.push(c < src.colonne.length ? src.colonne[c] : '');
+    src.celle.forEach((riga, r)=> celle[r].push(c < src.colonne.length ? riga[c] : null));
+  }
+  return { voci, celle, provv: src.provv.slice(), copiatoDa };
+}
+
+function nascondiPresunte(){
+  if(presunteView.style.display !== 'none'){ flushPresunte(); }
+  presunteView.style.display = 'none';
+  selPresunte.value = '';
+}
+
+async function showPresunte(anno){
+  riepilogoView.style.display = 'none';
+  speseFisseView.style.display = 'none';
+  selRiepilogoAnno.value = '';
+  selSpeseFisse.value = '';
+  mainContent.style.display = 'none';
+  controlliMese.style.display = 'none';
+  presunteView.style.display = 'block';
+  appEl.classList.add('largo');
+  presunteTitolo.textContent = `Spese presunte ${anno}`;
+  presunteHead.innerHTML = '';
+  presunteBody.innerHTML = '<tr><td style="text-align:center; padding:20px; color:var(--ink-soft); font-style:italic; background:transparent;">Caricamento…</td></tr>';
+
+  let doc = null;
+  try{
+    const res = await store.get('presunte:' + anno);
+    if(res && res.value){ doc = JSON.parse(res.value); }
+  } catch(e){ doc = null; }
+
+  let nuovo = false;
+  if(!doc || !Array.isArray(doc.voci)){
+    const src = await leggiSpeseFisseAnno(anno - 1);
+    doc = nuovoFoglioDa(src, anno - 1);
+    nuovo = true;
+  }
+  presunteDati = doc;
+  presunteAnno = anno;
+  disegnaPresunte();
+  if(nuovo){ await salvaPresunte(); }
+}
+
+function celleTesto(v){ return (v === null || v === undefined || v === '') ? '' : formatEuro(v); }
+
+function disegnaPresunte(){
+  const d = presunteDati;
+  let h = '<tr><th class="sf-mese">Mese</th>';
+  d.voci.forEach((v, c)=>{
+    h += `<th><textarea class="pr-voce" data-c="${c}" rows="4" maxlength="80" placeholder="Voce">${escapeHtml(v)}</textarea></th>`;
+  });
+  h += '<th class="sf-totale"><div class="sf-voce sf-voce-tot">Totale spese del mese</div></th>';
+  h += '<th class="sf-provv"><div class="sf-voce">Provvigioni</div></th></tr>';
+  presunteHead.innerHTML = h;
+
+  let b = '';
+  for(let m=0; m<12; m++){
+    b += `<tr data-m="${m}"><td class="sf-mese">${MESI[m].toUpperCase()}</td>`;
+    for(let c=0; c<d.voci.length; c++){
+      b += `<td><input type="text" inputmode="decimal" class="pr-cell" data-m="${m}" data-c="${c}" placeholder="—" autocomplete="off" value="${escapeHtml(celleTesto(d.celle[m][c]))}"></td>`;
+    }
+    b += `<td class="sf-totale"><div class="pr-calc vuoto" id="pr-tot-${m}">—</div></td>`;
+    b += `<td class="sf-provv"><input type="text" inputmode="decimal" class="pr-cell" data-m="${m}" data-p="1" placeholder="—" autocomplete="off" value="${escapeHtml(celleTesto(d.provv[m]))}"></td></tr>`;
+  }
+  b += '<tr class="sf-riga-totale"><td class="sf-mese">TOTALE ANNO</td>';
+  for(let c=0; c<d.voci.length; c++){ b += '<td></td>'; }
+  b += '<td class="sf-totale"><div class="sf-grande" id="pr-tot-anno">€ 0,00</div></td>';
+  b += '<td class="sf-provv"><div class="sf-grande" id="pr-prov-anno">€ 0,00</div></td></tr>';
+  presunteBody.innerHTML = b;
+
+  const nota = document.getElementById('presunte-nota');
+  nota.textContent = (d.copiatoDa ? `Partito come copia del Riepilogo Spese Fisse ${d.copiatoDa}. ` : '') +
+    'Ora è un foglio libero: scrivi e modifica dove vuoi. Non è collegato alle altre schede e non cambia nessun dato. I totali si calcolano da soli.';
+  aggiornaTotaliPresunte();
+}
+
+function aggiornaTotaliPresunte(){
+  const d = presunteDati;
+  let totAnno = 0, provAnno = 0;
+  for(let m=0; m<12; m++){
+    let somma = 0, conValori = false;
+    d.celle[m].forEach(v => { if(typeof v === 'number' && !isNaN(v)){ somma += v; conValori = true; } });
+    const el = document.getElementById('pr-tot-' + m);
+    if(el){
+      if(conValori){ el.textContent = formatEuro(arrotonda2(somma)); el.classList.remove('vuoto'); }
+      else { el.textContent = '—'; el.classList.add('vuoto'); }
+    }
+    totAnno += somma;
+    if(typeof d.provv[m] === 'number' && !isNaN(d.provv[m])) provAnno += d.provv[m];
+  }
+  const a = document.getElementById('pr-tot-anno'), b = document.getElementById('pr-prov-anno');
+  if(a) a.textContent = formatEuro(arrotonda2(totAnno));
+  if(b) b.textContent = formatEuro(arrotonda2(provAnno));
+}
+
+function queuePresunte(){
+  saveStatus.innerHTML = '<span class="dot" style="background:#d9a441"></span>Salvataggio...';
+  clearTimeout(presunteTimer);
+  presunteTimer = setTimeout(salvaPresunte, 500);
+}
+async function salvaPresunte(){
+  clearTimeout(presunteTimer); presunteTimer = null;
+  if(!presunteDati || !presunteAnno) return;
+  try{
+    await store.set('presunte:' + presunteAnno, JSON.stringify(presunteDati));
+    saveStatus.innerHTML = '<span class="dot"></span>Salvato';
+  } catch(e){
+    saveStatus.innerHTML = '<span class="dot" style="background:#c0392b"></span>Errore di salvataggio';
+  }
+}
+function flushPresunte(){ if(presunteTimer){ salvaPresunte(); } }
+
+function valoreCella(testo){
+  const n = parseEuro(testo);
+  return isNaN(n) ? null : arrotonda2(n);
+}
+
+presunteBody.addEventListener('input', (e)=>{
+  const t = e.target;
+  if(!t.classList.contains('pr-cell') || !presunteDati) return;
+  const m = parseInt(t.dataset.m);
+  const v = valoreCella(t.value);
+  if(t.dataset.p){ presunteDati.provv[m] = v; }
+  else { presunteDati.celle[m][parseInt(t.dataset.c)] = v; }
+  aggiornaTotaliPresunte();
+  queuePresunte();
+});
+presunteBody.addEventListener('change', (e)=>{
+  const t = e.target;
+  if(!t.classList.contains('pr-cell')) return;
+  const v = valoreCella(t.value);
+  t.value = v === null ? '' : formatEuro(v);
+});
+presunteBody.addEventListener('focusin', (e)=>{
+  if(e.target.classList.contains('pr-cell')){ setTimeout(()=> e.target.select(), 0); }
+});
+presunteBody.addEventListener('keydown', (e)=>{
+  const t = e.target;
+  if(!t.classList.contains('pr-cell')) return;
+  let dm = 0;
+  if(e.key === 'Enter' || e.key === 'ArrowDown') dm = 1;
+  else if(e.key === 'ArrowUp') dm = -1;
+  else return;
+  e.preventDefault();
+  const m = parseInt(t.dataset.m) + dm;
+  if(m < 0 || m > 11) return;
+  const sel = t.dataset.p ? `input.pr-cell[data-m="${m}"][data-p="1"]` : `input.pr-cell[data-m="${m}"][data-c="${t.dataset.c}"]`;
+  const next = presunteBody.querySelector(sel);
+  if(next) next.focus();
+});
+presunteHead.addEventListener('input', (e)=>{
+  const t = e.target;
+  if(!t.classList.contains('pr-voce') || !presunteDati) return;
+  presunteDati.voci[parseInt(t.dataset.c)] = t.value.replace(/\s+/g, ' ');
+  queuePresunte();
+});
+presunteHead.addEventListener('keydown', (e)=>{
+  if(e.target.classList.contains('pr-voce') && e.key === 'Enter'){ e.preventDefault(); }
+});
+
+function aggiungiColonnaPresunte(){
+  if(!presunteDati) return;
+  presunteDati.voci.push('');
+  presunteDati.celle.forEach(r => r.push(null));
+  disegnaPresunte();
+  queuePresunte();
+  const wrap = presunteView.querySelector('.ledger-wrap');
+  if(wrap){ wrap.scrollLeft = wrap.scrollWidth; }
+}
+
+async function ricopiaPresunte(){
+  if(!presunteDati || !presunteAnno) return;
+  document.getElementById('conferma-titolo').textContent = 'Stai per effettuare una modifica';
+  document.getElementById('conferma-t1').textContent = `Stai per sostituire tutto il foglio Spese presunte ${presunteAnno}:`;
+  document.getElementById('conferma-nomi').innerHTML = `Tutto quello che hai scritto qui sarà cancellato e il foglio ripartirà da una nuova copia del <b>Riepilogo Spese Fisse ${presunteAnno - 1}</b>.`;
+  document.getElementById('conferma-t2').textContent = 'Le altre schede non vengono modificate.';
+  const ok = await chiediConferma();
+  if(!ok) return;
+  const src = await leggiSpeseFisseAnno(presunteAnno - 1);
+  presunteDati = nuovoFoglioDa(src, presunteAnno - 1);
+  disegnaPresunte();
+  await salvaPresunte();
+}
+
+function esportaPresunte(){
+  const d = presunteDati;
+  if(!d){ return; }
+  const intest = ['Mese', ...d.voci.map((v, i)=> v.trim() || ('Colonna ' + (i + 1))), 'Totale spese del mese', 'Provvigioni'];
+  const righe = [intest];
+  let totAnno = 0, provAnno = 0;
+  for(let m=0; m<12; m++){
+    let somma = 0, conValori = false;
+    d.celle[m].forEach(v => { if(typeof v === 'number'){ somma += v; conValori = true; } });
+    const pv = (typeof d.provv[m] === 'number') ? d.provv[m] : null;
+    totAnno += somma; if(pv !== null) provAnno += pv;
+    righe.push([MESI[m], ...d.celle[m].map(v => (typeof v === 'number' ? v : null)), conValori ? arrotonda2(somma) : null, pv]);
+  }
+  righe.push(['TOTALE ANNO', ...d.voci.map(()=>null), arrotonda2(totAnno), arrotonda2(provAnno)]);
+  scaricaTabella(`Spese_presunte_${presunteAnno}`, intest, righe);
+}
+
 async function showSpeseFisse(anno){
+  nascondiPresunte();
   riepilogoView.style.display = 'none';
   selRiepilogoAnno.value = '';
   mainContent.style.display = 'none';
@@ -1457,6 +1768,7 @@ async function showSpeseFisse(anno){
 }
 
 async function showRiepilogo(anno){
+  nascondiPresunte();
   speseFisseView.style.display = 'none';
   appEl.classList.remove('largo');
   selSpeseFisse.value = '';

@@ -6,6 +6,7 @@
 <title>Contabilità Spese</title>
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
   :root{
     --bg: #10233b;
@@ -83,7 +84,7 @@
 
   /* row 1: year / month / saldo precedente - top right */
   .row-controls{
-    display:flex; justify-content:flex-end; gap:22px; flex-wrap:wrap; margin-bottom:16px;
+    display:flex; justify-content:flex-end; gap:12px; flex-wrap:wrap; margin-bottom:16px;
   }
   .ctrl-box{ display:flex; flex-direction:column; gap:6px; min-width:130px; }
   .ctrl-box label{
@@ -233,6 +234,90 @@
   table.ledger .riepilogo-valore.negativo{ background:#fdf6cf; color: var(--red-deep); font-weight:800; font-size:16px; }
   table.ledger td.riepilogo-saldo-ultimo .riepilogo-valore.negativo,
   table.ledger td.riepilogo-saldo-primo .riepilogo-valore.negativo{ font-size: 19px; }
+  table.ledger tr.riepilogo-totale td{ border-top: 3px solid var(--green-deep); padding-top: 8px; }
+  table.ledger tr.riepilogo-totale .riepilogo-valore{ font-weight:800; font-size: 18px; border: 2px solid var(--green-deep); }
+  table.ledger tr.riepilogo-totale .riepilogo-valore.negativo{ font-size: 19px; border-color:#e8d98a; }
+
+  .ctrl-box select.sf-box-select{
+    background:#fff; border:2px solid var(--gold); color: var(--green-deep);
+    font-weight:800; font-size:14px; text-align:center; text-align-last:center; line-height:1.3;
+  }
+  #conferma-overlay{
+    position:fixed; inset:0; background:rgba(8,18,32,.72); display:none; align-items:center; justify-content:center;
+    z-index:9999; padding:16px;
+  }
+  #conferma-overlay.aperto{ display:flex; }
+  .conferma-box{
+    background:var(--paper); border:2px solid var(--gold); border-radius:12px; padding:22px 20px;
+    max-width:420px; width:100%; color:var(--ink); box-shadow:0 12px 40px rgba(0,0,0,.45);
+  }
+  .conferma-box h3{ margin:0 0 10px; font-size:18px; color:var(--green-deep); font-family:"Fraunces","Georgia",serif; }
+  .conferma-box p{ margin:0 0 8px; font-size:14px; line-height:1.5; }
+  .conferma-box .conferma-nomi{ background:#fff; border-radius:8px; padding:10px 12px; font-size:14px; word-break:break-word; }
+  .conferma-btns{ display:flex; gap:10px; margin-top:16px; }
+  .conferma-btns button{
+    flex:1; padding:12px 8px; font-size:15px; font-weight:700; border-radius:8px; cursor:pointer; font-family:inherit;
+  }
+  #conferma-annulla{ background:#fff; color:var(--red-deep); border:2px solid var(--red-deep); }
+  #conferma-ok{ background:var(--green-deep); color:#fff; border:2px solid var(--green-deep); }
+  .sf-nota{ color:#8ea3b8; font-size:12px; margin:0 2px 12px; line-height:1.5; }
+  table.ledger.spese-fisse-table{ width:max-content; min-width:0; table-layout:fixed; }
+  table.ledger.spese-fisse-table th, table.ledger.spese-fisse-table td{ width:92px; min-width:92px; max-width:92px; padding-left:3px; padding-right:3px; }
+  table.ledger.spese-fisse-table th{
+    white-space:normal; word-break:break-word; overflow-wrap:anywhere; hyphens:auto;
+    text-align:center; vertical-align:middle; line-height:1.25; font-size:11px; padding-top:8px; padding-bottom:8px;
+  }
+  .sf-voce{
+    width:84px; box-sizing:border-box; background:#fff; color:var(--green-deep); border-radius:6px;
+    padding:6px 4px; margin:0 auto; text-transform:none; letter-spacing:0; font-weight:700; font-size:12px;
+    line-height:1.25; text-align:center; white-space:normal; overflow-wrap:anywhere; word-break:break-word;
+    min-height:44px; display:flex; align-items:center; justify-content:center;
+  }
+  table.ledger.spese-fisse-table td .riepilogo-valore{ padding-left:4px; padding-right:4px; font-size:13px; font-weight:800; border:1.5px solid var(--green-deep); }
+  table.ledger.spese-fisse-table td .riepilogo-valore.vuoto{ font-weight:400; border:1px solid var(--border); }
+  table.ledger.spese-fisse-table td .riepilogo-valore.negativo{ border-color:#c9b43a; }
+  table.ledger.spese-fisse-table th.sf-provv .sf-voce{ background:#d3ecd6; }
+  table.ledger.spese-fisse-table th.sf-totale{ color:#000; font-weight:800; }
+  table.ledger.spese-fisse-table td.sf-totale, table.ledger.spese-fisse-table td.sf-totale .riepilogo-valore{ color:#000; }
+  table.ledger.spese-fisse-table td.sf-totale .riepilogo-valore{ border-color:#000; }
+  table.ledger.spese-fisse-table th.sf-mese, table.ledger.spese-fisse-table td.sf-mese{ width:104px; min-width:104px; max-width:104px; }
+  table.ledger.spese-fisse-table th.sf-totale, table.ledger.spese-fisse-table td.sf-totale{ width:120px; min-width:120px; max-width:120px; }
+  table.ledger.spese-fisse-table th.sf-mese, table.ledger.spese-fisse-table td.sf-mese{
+    position:sticky; left:0; z-index:2; background: var(--green-deep); color:#fff;
+    font-family:"Fraunces","Georgia",serif; font-weight:700; font-size:14px; text-align:center; border-radius:4px;
+  }
+  table.ledger.spese-fisse-table th.sf-totale, table.ledger.spese-fisse-table td.sf-totale{
+    position:sticky; right:0; z-index:2; background:#f9dcd9;
+  }
+  table.ledger.spese-fisse-table td.sf-totale .riepilogo-valore{ font-weight:800; font-size:14px; background:#f9dcd9; }
+  
+
+  #app.largo{ max-width:none; }
+  .sf-azioni{ display:flex; gap:10px; flex-wrap:wrap; }
+  .logout-btn.sf-export{ border-color: var(--gold); color:#f2d98a; font-weight:700; }
+  .ricalcola-top{ display:flex; justify-content:flex-end; margin-bottom:14px; }
+  .ricalcola-top .ricalcola-btn{ width:auto; height:auto; min-height:0; padding:11px 22px; font-size:14px; }
+  table.ledger.spese-fisse-table th.sf-totale .sf-voce, table.ledger.spese-fisse-table th.sf-provv .sf-voce{ width:140px; font-size:12px; }
+  table.ledger.spese-fisse-table thead th.sf-totale{ background: var(--green-deep); color:#000; }
+  .sf-voce.sf-voce-tot{ background:#f9dcd9; border:2px solid var(--green-deep); color:#000; font-weight:800; }
+  table.ledger.spese-fisse-table td.sf-totale .riepilogo-valore{ border-color: var(--green-deep); }
+  table.ledger.spese-fisse-table th.sf-totale, table.ledger.spese-fisse-table td.sf-totale,
+  table.ledger.spese-fisse-table th.sf-provv, table.ledger.spese-fisse-table td.sf-provv{ width:150px; min-width:150px; max-width:150px; }
+  table.ledger.spese-fisse-table tr.sf-riga-totale td{ border-bottom:none; padding-top:10px; }
+  table.ledger.spese-fisse-table tr.sf-riga-totale td:not(.sf-mese){ background:transparent; }
+  table.ledger.spese-fisse-table tr.sf-riga-totale td.sf-mese{ font-size:12px; }
+  table.ledger.spese-fisse-table tr.sf-riga-totale .sf-grande{
+    display:flex; align-items:center; justify-content:center; box-sizing:border-box; min-height:58px;
+    border:3px solid var(--green-deep); border-radius:10px; font-family:"JetBrains Mono","Courier New",monospace;
+    font-weight:800; font-size:18px; color:#000; padding:6px 4px; background:#f9dcd9; white-space:nowrap;
+  }
+  table.ledger.spese-fisse-table tr.sf-riga-totale td.sf-provv .sf-grande{ background:#d3ecd6; }
+  table.ledger.spese-fisse-table th, table.ledger.spese-fisse-table td{ width:82px; min-width:82px; max-width:82px; }
+  table.ledger.spese-fisse-table .sf-voce{ width:76px; font-size:11px; }
+  table.ledger.spese-fisse-table td .riepilogo-valore{ font-size:12px; padding-left:2px; padding-right:2px; }
+  table.ledger.spese-fisse-table th.sf-totale, table.ledger.spese-fisse-table td.sf-totale,
+  table.ledger.spese-fisse-table th.sf-provv, table.ledger.spese-fisse-table td.sf-provv{ position:static; width:150px; min-width:150px; max-width:150px; }
+  table.ledger.spese-fisse-table th.sf-mese, table.ledger.spese-fisse-table td.sf-mese{ width:92px; min-width:92px; max-width:92px; font-size:12px; }
 
   @media (max-width:700px){
     .row-controls{
@@ -243,12 +328,28 @@
     .row-summary{ grid-template-columns: repeat(2,1fr); }
     .row-summary .summary-box:last-child{ grid-column: span 2; }
     table.ledger{ min-width: 620px; }
+    table.ledger.spese-fisse-table{ min-width:0; }
+    table.ledger.spese-fisse-table th.sf-totale, table.ledger.spese-fisse-table td.sf-totale{ position:static; }
+    table.ledger.spese-fisse-table th.sf-mese, table.ledger.spese-fisse-table td.sf-mese{ width:84px; min-width:84px; max-width:84px; font-size:12px; }
     .riepilogo-header{ flex-direction:column; align-items:flex-start; gap:10px; }
   }
 </style>
 </head>
 <body>
 
+<datalist id="elenco-voci"></datalist>
+<div id="conferma-overlay">
+  <div class="conferma-box" role="dialog" aria-modal="true">
+    <h3>Stai per effettuare una modifica</h3>
+    <p>Stai cambiando il nome di una voce di spesa:</p>
+    <div class="conferma-nomi" id="conferma-nomi"></div>
+    <p style="margin-top:10px;">Nel Riepilogo Spese Fisse l'importo passerà alla colonna con il nuovo nome (se la colonna vecchia non serve più, sparisce).</p>
+    <div class="conferma-btns">
+      <button type="button" id="conferma-annulla">Annulla<br><span style="font-weight:400;font-size:12px;">annulla operazione</span></button>
+      <button type="button" id="conferma-ok">OK<br><span style="font-weight:400;font-size:12px;">procedi</span></button>
+    </div>
+  </div>
+</div>
 <div id="login-screen">
   <div class="login-box">
     <h1>Contabilità Spese</h1>
@@ -268,6 +369,10 @@
       <span class="status" id="save-status"><span class="dot"></span>Salvato</span>
       <button class="logout-btn" id="logout-btn">Blocca</button>
     </div>
+  </div>
+
+  <div class="ricalcola-top">
+    <button type="button" id="btn-ricalcola-anno" class="ricalcola-btn">↻ Ricalcola tutto l'anno</button>
   </div>
 
   <div class="row-controls">
@@ -297,7 +402,9 @@
     </div>
     <div class="ctrl-box">
       <label>&nbsp;</label>
-      <button type="button" id="btn-ricalcola-anno" class="ricalcola-btn">↻ Ricalcola<br>tutto l'anno</button>
+      <select id="sel-spese-fisse" class="sf-box-select">
+        <option value="">Riepilogo Spese Fisse</option>
+      </select>
     </div>
   </div>
 
@@ -362,6 +469,23 @@
           </tr>
         </thead>
         <tbody id="riepilogo-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div id="spese-fisse-view" style="display:none;">
+    <div class="riepilogo-header">
+      <h2 id="spese-fisse-titolo">Riepilogo Spese Fisse</h2>
+      <div class="sf-azioni">
+        <button class="logout-btn sf-export" id="spese-fisse-export" type="button">⬇ Esporta in Excel</button>
+        <button class="logout-btn" id="spese-fisse-back">← Torna alla contabilità</button>
+      </div>
+    </div>
+    <p class="sf-nota">Solo visualizzazione: i dati si modificano dalla scheda Contabilità Spese e qui si aggiornano da soli.</p>
+    <div class="ledger-wrap">
+      <table class="ledger spese-fisse-table">
+        <thead id="spese-fisse-head"></thead>
+        <tbody id="spese-fisse-body"></tbody>
       </table>
     </div>
   </div>
@@ -582,6 +706,11 @@ const controlliMese = document.getElementById('controlli-mese');
 const riepilogoView = document.getElementById('riepilogo-view');
 const riepilogoTitolo = document.getElementById('riepilogo-titolo');
 const riepilogoBody = document.getElementById('riepilogo-body');
+const selSpeseFisse = document.getElementById('sel-spese-fisse');
+const speseFisseView = document.getElementById('spese-fisse-view');
+const speseFisseTitolo = document.getElementById('spese-fisse-titolo');
+const speseFisseHead = document.getElementById('spese-fisse-head');
+const speseFisseBody = document.getElementById('spese-fisse-body');
 
 function buildSelectors(){
   const now = new Date();
@@ -595,6 +724,10 @@ function buildSelectors(){
     const optR = document.createElement('option');
     optR.value = y; optR.textContent = y;
     selRiepilogoAnno.appendChild(optR);
+
+    const optS = document.createElement('option');
+    optS.value = y; optS.textContent = y;
+    selSpeseFisse.appendChild(optS);
   }
   MESI.forEach((m, i)=>{
     const opt = document.createElement('option');
@@ -608,6 +741,50 @@ const N_ROWS_NOTE = 3;
 
 function pad(n){ return String(n).padStart(2,'0'); }
 function daysInMonth(year, month){ return new Date(year, month, 0).getDate(); }
+
+// ---- Suggerimenti: voci già usate in qualsiasi mese ----
+const vociSuggerite = new Map(); // chiave minuscola -> testo originale
+function aggiungiSuggerimento(testo){
+  const t = (testo || '').trim().replace(/\s+/g, ' ');
+  if(!t) return;
+  const k = t.toLowerCase();
+  if(!vociSuggerite.has(k)) vociSuggerite.set(k, t);
+}
+function ridisegnaSuggerimenti(){
+  const dl = document.getElementById('elenco-voci');
+  const elenco = [...vociSuggerite.values()].sort((a,b)=> a.localeCompare(b, 'it'));
+  dl.innerHTML = elenco.map(v => `<option value="${escapeHtml(v)}"></option>`).join('');
+}
+async function caricaSuggerimenti(){
+  try{
+    const res = await store.list('ledger:');
+    const keys = (res && res.keys) ? res.keys : [];
+    const neutralStart = N_ROWS - N_ROWS_NOTE;
+    const dati = await Promise.all(keys.map(k => store.get(k).catch(()=>null)));
+    dati.forEach(r=>{
+      if(!r || !r.value) return;
+      try{ (JSON.parse(r.value).rows || []).forEach((row, idx)=>{ if(idx < neutralStart) aggiungiSuggerimento(row.spese); }); }catch(e){}
+    });
+  } catch(e){ /* nessun suggerimento disponibile */ }
+  ridisegnaSuggerimenti();
+}
+
+function chiediConferma(){ return new Promise(res=>{
+  const ov = document.getElementById('conferma-overlay');
+  const chiudi = (v)=>{ ov.classList.remove('aperto'); okB.onclick = annB.onclick = null; document.removeEventListener('keydown', tasto); res(v); };
+  const okB = document.getElementById('conferma-ok'), annB = document.getElementById('conferma-annulla');
+  const tasto = (e)=>{ if(e.key === 'Escape'){ chiudi(false); } };
+  okB.onclick = ()=> chiudi(true);
+  annB.onclick = ()=> chiudi(false);
+  document.addEventListener('keydown', tasto);
+  ov.classList.add('aperto');
+  annB.focus();
+}); }
+function chiediConfermaRinomina(prima, dopo){
+  document.getElementById('conferma-nomi').innerHTML =
+    `Da: <b>${escapeHtml(prima)}</b><br>A: <b>${escapeHtml(dopo || '(vuoto)')}</b>`;
+  return chiediConferma();
+}
 
 function buildRows(){
   ledgerBody.innerHTML = '';
@@ -623,7 +800,7 @@ function buildRows(){
         <button type="button" class="move-btn" data-move="down" data-row="${i}" title="Sposta giù">▼</button>
       </td>
       <td><input type="date" data-row="${i}" data-field="data"></td>
-      <td><input type="text" data-row="${i}" data-field="spese" placeholder="${spesePlaceholder}"></td>
+      <td><input type="text" data-row="${i}" data-field="spese" placeholder="${spesePlaceholder}" autocomplete="off"${isNote ? '' : ' list="elenco-voci"'}></td>
       <td class="col-importo"><input type="text" inputmode="decimal" data-row="${i}" data-field="importo" placeholder="0,00"></td>
       <td class="col-stato">
         <select data-row="${i}" data-recurring-id="" data-prev="sbloccato">
@@ -637,7 +814,25 @@ function buildRows(){
     ledgerBody.appendChild(tr);
   }
   ledgerBody.querySelectorAll('input').forEach(inp=>{
-    inp.addEventListener('input', ()=>{ recalc(); queueSave(); });
+    inp.addEventListener('input', ()=>{
+      recalc();
+      // se si sta rinominando una voce già esistente, il salvataggio avviene solo dopo la conferma
+      if(inp.dataset.field === 'spese' && (inp.dataset.orig || '').trim() !== '' && !inp.closest('tr').classList.contains('row-note')) return;
+      queueSave();
+    });
+  });
+  ledgerBody.querySelectorAll('input[data-field="spese"]').forEach(inp=>{
+    inp.addEventListener('focus', ()=>{ inp.dataset.orig = inp.value; });
+    inp.addEventListener('change', async ()=>{
+      const prima = inp.dataset.orig || '';
+      const dopo = inp.value;
+      if(inp.closest('tr').classList.contains('row-note')){ inp.dataset.orig = dopo; recalc(); queueSave(); return; }
+      if(prima.trim() === '' || prima.trim() === dopo.trim()){ inp.dataset.orig = dopo; aggiungiSuggerimento(dopo); ridisegnaSuggerimenti(); recalc(); queueSave(); return; }
+      const ok = await chiediConfermaRinomina(prima.trim(), dopo.trim());
+      if(ok){ inp.dataset.orig = dopo; aggiungiSuggerimento(dopo); ridisegnaSuggerimenti(); }
+      else { inp.value = prima; inp.dataset.orig = prima; }
+      recalc(); queueSave();
+    });
   });
   ledgerBody.querySelectorAll('input[data-field="importo"]').forEach(inp=>{
     inp.addEventListener('focus', ()=>{
@@ -1027,6 +1222,7 @@ async function savePeriod(){
 
 function startApp(){
   buildSelectors();
+  caricaSuggerimenti();
   loadPeriod();
   selAnno.addEventListener('change', loadPeriod);
   selMese.addEventListener('change', loadPeriod);
@@ -1078,12 +1274,22 @@ function startApp(){
     const anno = selRiepilogoAnno.value;
     if(anno){ showRiepilogo(parseInt(anno)); }
   });
-  document.getElementById('riepilogo-back').addEventListener('click', ()=>{
+  selSpeseFisse.addEventListener('change', ()=>{
+    const anno = selSpeseFisse.value;
+    if(anno){ showSpeseFisse(parseInt(anno)); }
+  });
+  function tornaAllaContabilita(){
     riepilogoView.style.display = 'none';
+    speseFisseView.style.display = 'none';
+    appEl.classList.remove('largo');
     mainContent.style.display = 'block';
     controlliMese.style.display = 'contents';
     selRiepilogoAnno.value = '';
-  });
+    selSpeseFisse.value = '';
+  }
+  document.getElementById('riepilogo-back').addEventListener('click', tornaAllaContabilita);
+  document.getElementById('spese-fisse-back').addEventListener('click', tornaAllaContabilita);
+  document.getElementById('spese-fisse-export').addEventListener('click', esportaSpeseFisse);
 }
 
 async function ricalcolaCatenaAnno(anno){
@@ -1111,7 +1317,149 @@ async function ricalcolaCatenaAnno(anno){
   }
 }
 
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+}
+
+// Raggruppa le righe di un mese per descrizione (senza maiuscole/spazi doppi).
+// Le ultime righe "promemoria" (verdi) sono escluse, come nei totali.
+function raggruppaVociMese(rows){
+  const neutralStart = N_ROWS - N_ROWS_NOTE;
+  const voci = [];
+  (rows || []).forEach((r, idx)=>{
+    if(idx >= neutralStart) return;
+    const importo = parseFloat(r.importo);
+    if(isNaN(importo)) return;
+    const desc = (r.spese || '').trim().replace(/\s+/g, ' ');
+    const chiave = desc ? desc.toLowerCase() : '__senza_descrizione__';
+    const etichetta = desc || 'Senza descrizione';
+    let v = voci.find(x => x.chiave === chiave);
+    if(!v){ v = { chiave, etichetta, somma: 0 }; voci.push(v); }
+    v.somma += importo;
+  });
+  return voci;
+}
+
+let datiSpeseFisse = null;
+
+function esportaSpeseFisse(){
+  const d = datiSpeseFisse;
+  if(!d){ alert('Apri prima un anno nel Riepilogo Spese Fisse.'); return; }
+  const intest = ['Mese', ...d.colonne, 'Totale spese del mese', 'Provvigioni'];
+  const righe = [intest];
+  d.mesi.forEach((ms, idx)=>{
+    righe.push([
+      MESI[idx],
+      ...d.chiavi.map(k => { const v = ms.voci.find(x => x.chiave === k); return v ? Math.round(v.somma*100)/100 : null; }),
+      ms.dati ? Math.round(ms.totale*100)/100 : null,
+      ms.provv !== null ? Math.round(ms.provv*100)/100 : null
+    ]);
+  });
+  righe.push(['TOTALE ANNO', ...d.chiavi.map(()=>null), Math.round(d.sommaTot*100)/100, Math.round(d.sommaProv*100)/100]);
+  const nome = `Riepilogo_Spese_Fisse_${d.anno}`;
+
+  if(window.XLSX){
+    const ws = XLSX.utils.aoa_to_sheet(righe);
+    const rif = XLSX.utils.decode_range(ws['!ref']);
+    for(let r=1; r<=rif.e.r; r++){
+      for(let c=1; c<=rif.e.c; c++){
+        const cell = ws[XLSX.utils.encode_cell({r, c})];
+        if(cell && cell.t === 'n'){ cell.z = '#,##0.00'; }
+      }
+    }
+    ws['!cols'] = intest.map((t, i)=> ({ wch: i === 0 ? 14 : Math.max(12, Math.min(28, String(t).length + 2)) }));
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Spese Fisse ' + d.anno);
+    XLSX.writeFile(wb, nome + '.xlsx');
+  } else {
+    // alternativa: CSV (si apre in Excel; separatore ; e virgola decimale)
+    const esc = (v)=> {
+      if(v === null || v === undefined) return '';
+      if(typeof v === 'number') return String(v).replace('.', ',');
+      return '"' + String(v).replace(/"/g, '""') + '"';
+    };
+    const csv = '\uFEFF' + righe.map(r => r.map(esc).join(';')).join('\r\n');
+    const blob = new Blob([csv], { type:'text/csv;charset=utf-8' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = nome + '.csv';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=> URL.revokeObjectURL(a.href), 2000);
+  }
+}
+
+async function showSpeseFisse(anno){
+  riepilogoView.style.display = 'none';
+  selRiepilogoAnno.value = '';
+  mainContent.style.display = 'none';
+  controlliMese.style.display = 'none';
+  speseFisseView.style.display = 'block';
+  appEl.classList.add('largo');
+  speseFisseTitolo.textContent = `Riepilogo Spese Fisse ${anno}`;
+  speseFisseHead.innerHTML = '';
+  speseFisseBody.innerHTML = '<tr><td style="text-align:center; padding:20px; color:var(--ink-soft); font-style:italic; background:transparent;">Caricamento…</td></tr>';
+
+  const mesi = [];
+  for(let m=1; m<=12; m++){
+    let voci = [], dati = false, totale = 0, provv = null;
+    try{
+      const res = await store.get(keyFor(anno, m));
+      if(res && res.value){
+        const d = JSON.parse(res.value);
+        voci = raggruppaVociMese(d.rows);
+        totale = calcolaSpeseDaRighe(d.rows);
+        const pv = parseFloat(d.provvigioni);
+        provv = (isNaN(pv) || pv === 0) ? null : pv;
+        dati = true;
+      }
+    } catch(e){ /* mese senza dati */ }
+    mesi.push({ voci, totale, dati, provv });
+  }
+
+  // Colonne = voci in ordine di prima comparsa (gen→dic)
+  const colonne = [];
+  mesi.forEach(ms => ms.voci.forEach(v=>{
+    if(!colonne.find(c => c.chiave === v.chiave)) colonne.push({ chiave: v.chiave, etichetta: v.etichetta });
+  }));
+  // colonne libere: abbastanza da riempire la larghezza dello schermo (minimo 4)
+  const spazio = Math.max(0, window.innerWidth - 36 - 92 - 150 - 150 - 12);
+  const COLONNE_LIBERE = Math.max(4, Math.floor(spazio / 86) - colonne.length);
+
+  let h = '<tr><th class="sf-mese">Mese</th>';
+  colonne.forEach(c => { h += `<th><div class="sf-voce">${escapeHtml(c.etichetta)}</div></th>`; });
+  for(let i=0; i<COLONNE_LIBERE; i++){ h += '<th class="sf-vuota"><div class="sf-voce">&nbsp;</div></th>'; }
+  h += '<th class="sf-totale"><div class="sf-voce sf-voce-tot">Totale spese del mese</div></th><th class="sf-provv"><div class="sf-voce">Provvigioni</div></th></tr>';
+  speseFisseHead.innerHTML = h;
+
+  const cella = (val)=> `<span class="riepilogo-valore${val < 0 ? ' negativo' : ''}">${formatEuro(val)}</span>`;
+  const vuota = '<span class="riepilogo-valore vuoto">—</span>';
+  let b = '';
+  mesi.forEach((ms, idx)=>{
+    b += `<tr><td class="sf-mese">${MESI[idx].toUpperCase()}</td>`;
+    colonne.forEach(c=>{
+      const v = ms.voci.find(x => x.chiave === c.chiave);
+      b += `<td>${v ? cella(v.somma) : vuota}</td>`;
+    });
+    for(let i=0; i<COLONNE_LIBERE; i++){ b += `<td>${vuota}</td>`; }
+    b += `<td class="sf-totale">${ms.dati ? cella(ms.totale) : vuota}</td><td class="sf-provv">${ms.provv !== null ? cella(ms.provv) : vuota}</td></tr>`;
+  });
+  // riga finale: somma di tutti i mesi
+  const sommaTot = mesi.reduce((a, ms)=> a + (ms.dati ? ms.totale : 0), 0);
+  const sommaProv = mesi.reduce((a, ms)=> a + (ms.provv !== null ? ms.provv : 0), 0);
+  b += '<tr class="sf-riga-totale"><td class="sf-mese">TOTALE ANNO</td>';
+  for(let i=0; i<colonne.length + COLONNE_LIBERE; i++){ b += '<td></td>'; }
+  b += `<td class="sf-totale"><div class="sf-grande">${formatEuro(sommaTot)}</div></td>`;
+  b += `<td class="sf-provv"><div class="sf-grande">${formatEuro(sommaProv)}</div></td></tr>`;
+  speseFisseBody.innerHTML = b;
+  datiSpeseFisse = {
+    anno, colonne: colonne.map(c => c.etichetta),
+    chiavi: colonne.map(c => c.chiave), mesi, sommaTot, sommaProv
+  };
+}
+
 async function showRiepilogo(anno){
+  speseFisseView.style.display = 'none';
+  appEl.classList.remove('largo');
+  selSpeseFisse.value = '';
   mainContent.style.display = 'none';
   controlliMese.style.display = 'none';
   riepilogoView.style.display = 'block';
@@ -1165,6 +1513,29 @@ async function showRiepilogo(anno){
     }
     riepilogoBody.appendChild(tr);
   });
+
+  // Riga dei totali: somma di gennaio-dicembre per ogni colonna
+  const tot = { saldoAttuale:0, differenza:0, versamento:0, spese:0, provvigioni:0 };
+  righe.forEach(r=>{
+    if(!r) return;
+    tot.saldoAttuale += r.saldoAttuale;
+    tot.differenza += r.differenza;
+    tot.versamento += r.versamento;
+    tot.spese += r.spese;
+    tot.provvigioni += r.provvigioni;
+  });
+  const cellaTot = (val)=> `<span class="riepilogo-valore${val < 0 ? ' negativo' : ''}">${formatEuro(val)}</span>`;
+  const trTot = document.createElement('tr');
+  trTot.className = 'riepilogo-totale';
+  trTot.innerHTML = `
+    <td class="riepilogo-mese-cell">TOTALE</td>
+    <td class="riepilogo-saldo-primo">${cellaTot(tot.saldoAttuale)}</td>
+    <td class="riepilogo-saldo-ultimo">${cellaTot(tot.differenza)}</td>
+    <td>${cellaTot(tot.versamento)}</td>
+    <td class="riepilogo-spese">${cellaTot(tot.spese)}</td>
+    <td>${cellaTot(tot.provvigioni)}</td>
+  `;
+  riepilogoBody.appendChild(trTot);
 }
 
 initLogin();

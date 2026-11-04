@@ -303,8 +303,8 @@
 
   #app.largo{ max-width:none; }
   .pr-voce{
-    width:76px; height:64px; box-sizing:border-box; background:#fff; color:var(--green-deep); border:none; border-radius:6px;
-    padding:5px 3px; font-family:inherit; font-weight:700; font-size:11px; line-height:1.25; text-align:center;
+    width:76px; height:78px; box-sizing:border-box; background:#fff; color:var(--green-deep); border:none; border-radius:6px;
+    padding:19px 3px 4px; font-family:inherit; font-weight:700; font-size:11px; line-height:1.25; text-align:center;
     resize:none; overflow:hidden; display:block; margin:0 auto;
   }
   .pr-voce::placeholder{ color:#b5bdc6; font-weight:400; }
@@ -322,6 +322,25 @@
   table.ledger.presunte-table td.sf-provv input.pr-cell{ font-size:13px; padding-left:6px; padding-right:6px; }
   .sf-azioni .status{ align-self:center; }
   .pr-vwrap{ position:relative; width:76px; margin:0 auto; }
+  .pr-grip{
+    position:absolute; top:3px; left:3px; width:17px; height:17px; line-height:17px; text-align:center; border-radius:4px;
+    background:#e3eaf0; color:#5a6a7a; font-size:13px; cursor:grab; user-select:none; z-index:1;
+  }
+  .pr-grip:active{ cursor:grabbing; }
+  .pr-frecce{ display:flex; justify-content:center; gap:6px; margin-top:4px; }
+  .pr-mv{
+    width:32px; height:17px; padding:0; border:none; border-radius:4px; background:#e3eaf0; color:#0e4a37;
+    font-size:10px; font-weight:700; cursor:pointer; line-height:17px;
+  }
+  .pr-mv:hover{ background:#c9d6e0; }
+  .pr-mv:disabled{ opacity:.3; cursor:default; }
+  #presunte-view th.pr-drop{ outline:3px dashed var(--gold); outline-offset:-3px; }
+  #presunte-view tr.sf-riga-totale .pr-sum{
+    box-sizing:border-box; min-height:42px; display:flex; align-items:center; justify-content:center; text-align:center;
+    background:#fbe4e2; border:2px solid var(--green-deep); border-radius:8px; color:#000;
+    font-family:"JetBrains Mono","Courier New",monospace; font-weight:800; font-size:12px; white-space:nowrap; padding:4px 2px;
+  }
+  #presunte-view tr.sf-riga-totale .pr-sum.vuoto{ font-weight:400; border:1px solid var(--border); color:#8a8a8a; }
   .pr-del{
     position:absolute; top:3px; right:3px; width:17px; height:17px; padding:0; line-height:15px; text-align:center;
     border:none; border-radius:50%; background:#f3c5c0; color:#7c2a1e; font-weight:800; font-size:13px; cursor:pointer;
@@ -1617,7 +1636,7 @@ function disegnaPresunte(){
   const d = presunteDati;
   let h = '<tr><th class="sf-mese">Mese</th>';
   d.voci.forEach((v, c)=>{
-    h += `<th><div class="pr-vwrap"><textarea class="pr-voce" data-c="${c}" rows="4" maxlength="80" placeholder="Voce">${escapeHtml(v)}</textarea><button type="button" class="pr-del" data-c="${c}" title="Elimina questa colonna">×</button></div></th>`;
+    h += `<th><div class="pr-vwrap"><div class="pr-grip" draggable="true" data-c="${c}" title="Trascina per spostare la colonna">⠿</div><textarea class="pr-voce" data-c="${c}" rows="4" maxlength="80" placeholder="Voce">${escapeHtml(v)}</textarea><button type="button" class="pr-del" data-c="${c}" title="Elimina questa colonna">×</button><div class="pr-frecce"><button type="button" class="pr-mv" data-c="${c}" data-dir="-1" title="Sposta a sinistra"${c === 0 ? ' disabled' : ''}>◀</button><button type="button" class="pr-mv" data-c="${c}" data-dir="1" title="Sposta a destra"${c === d.voci.length - 1 ? ' disabled' : ''}>▶</button></div></div></th>`;
   });
   h += '<th class="sf-extra"><div class="sf-voce">Versamento su C/C</div></th>';
   h += '<th class="sf-extra sf-saldo"><div class="sf-voce">Saldo Primo del Mese su C/C</div></th>';
@@ -1639,7 +1658,7 @@ function disegnaPresunte(){
     b += `<td class="sf-provv"><input type="text" inputmode="decimal" class="pr-cell" data-m="${m}" data-p="1" placeholder="—" autocomplete="off" value="${escapeHtml(celleTesto(d.provv[m]))}"></td></tr>`;
   }
   b += '<tr class="sf-riga-totale"><td class="sf-mese">TOTALE ANNO</td>';
-  for(let c=0; c<d.voci.length; c++){ b += '<td></td>'; }
+  for(let c=0; c<d.voci.length; c++){ b += `<td><div class="pr-sum vuoto" id="pr-sum-${c}">—</div></td>`; }
   b += '<td class="sf-extra"><div class="sf-grande" id="pr-vers-anno">€ 0,00</div></td><td class="sf-extra"></td><td class="sf-extra"></td>';
   b += '<td class="sf-totale"><div class="sf-grande" id="pr-tot-anno">€ 0,00</div></td>';
   b += '<td class="sf-provv"><div class="sf-grande" id="pr-prov-anno">€ 0,00</div></td></tr>';
@@ -1687,6 +1706,15 @@ function aggiornaTotaliPresunte(){
     carry = ultimo;
     totAnno += spese; provAnno += pv; versAnno += vs;
   }
+  d.voci.forEach((v, col)=>{
+    let t = 0, ok = false;
+    d.celle.forEach(r => { if(typeof r[col] === 'number' && !isNaN(r[col])){ t += r[col]; ok = true; } });
+    const el = document.getElementById('pr-sum-' + col);
+    if(el){
+      if(ok){ el.textContent = formatEuro(arrotonda2(t)); el.classList.remove('vuoto'); }
+      else { el.textContent = '—'; el.classList.add('vuoto'); }
+    }
+  });
   const a = document.getElementById('pr-tot-anno'), b = document.getElementById('pr-prov-anno'), c = document.getElementById('pr-vers-anno');
   if(a) a.textContent = formatEuro(arrotonda2(totAnno));
   if(b) b.textContent = formatEuro(arrotonda2(provAnno));
@@ -1776,6 +1804,58 @@ document.getElementById('pr-saldo-iniziale').addEventListener('change', (e)=>{
 });
 document.getElementById('pr-saldo-iniziale').addEventListener('focus', (e)=>{ setTimeout(()=> e.target.select(), 0); });
 
+function spostaColonnaPresunte(da, a){
+  const d = presunteDati;
+  if(!d || da === a || da < 0 || a < 0 || da >= d.voci.length || a >= d.voci.length) return;
+  const muovi = arr => { const x = arr.splice(da, 1)[0]; arr.splice(a, 0, x); };
+  muovi(d.voci);
+  d.celle.forEach(muovi);
+  disegnaPresunte();
+  queuePresunte();
+}
+let colonnaTrascinata = null;
+presunteHead.addEventListener('dragstart', (e)=>{
+  const g = e.target.closest ? e.target.closest('.pr-grip') : null;
+  if(!g){ e.preventDefault(); return; }
+  colonnaTrascinata = parseInt(g.dataset.c);
+  e.dataTransfer.effectAllowed = 'move';
+  try{ e.dataTransfer.setData('text/plain', String(colonnaTrascinata)); const th = g.closest('th'); if(th) e.dataTransfer.setDragImage(th, 38, 20); }catch(err){}
+});
+presunteHead.addEventListener('dragover', (e)=>{
+  if(colonnaTrascinata === null) return;
+  const th = e.target.closest ? e.target.closest('th') : null;
+  if(!th || !th.querySelector('.pr-voce')) return;
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+  presunteHead.querySelectorAll('th.pr-drop').forEach(x => x !== th && x.classList.remove('pr-drop'));
+  th.classList.add('pr-drop');
+});
+presunteHead.addEventListener('dragleave', (e)=>{
+  const th = e.target.closest ? e.target.closest('th') : null;
+  if(th && !th.contains(e.relatedTarget)) th.classList.remove('pr-drop');
+});
+presunteHead.addEventListener('drop', (e)=>{
+  if(colonnaTrascinata === null) return;
+  e.preventDefault();
+  const th = e.target.closest ? e.target.closest('th') : null;
+  const ta = th ? th.querySelector('.pr-voce') : null;
+  const da = colonnaTrascinata;
+  colonnaTrascinata = null;
+  presunteHead.querySelectorAll('th.pr-drop').forEach(x => x.classList.remove('pr-drop'));
+  if(ta){ spostaColonnaPresunte(da, parseInt(ta.dataset.c)); }
+});
+presunteHead.addEventListener('dragend', ()=>{
+  colonnaTrascinata = null;
+  presunteHead.querySelectorAll('th.pr-drop').forEach(x => x.classList.remove('pr-drop'));
+});
+presunteHead.addEventListener('click', (e)=>{
+  const mv = e.target.closest ? e.target.closest('.pr-mv') : null;
+  if(mv && presunteDati){
+    const c = parseInt(mv.dataset.c);
+    spostaColonnaPresunte(c, c + parseInt(mv.dataset.dir));
+    return;
+  }
+});
 presunteHead.addEventListener('click', (e)=>{
   const btn = e.target.closest ? e.target.closest('.pr-del') : null;
   if(!btn || !presunteDati) return;
@@ -1858,7 +1938,7 @@ function esportaPresunte(){
     totAnno += spese; provAnno += (pv || 0); versAnno += (vs || 0);
     righe.push([MESI[m], ...d.celle[m].map(v => num(v)), vs, arrotonda2(primo), arrotonda2(ultimo), (conValori || num(d.totManuale[m]) !== null) ? arrotonda2(spese) : null, pv]);
   }
-  righe.push(['TOTALE ANNO', ...d.voci.map(()=>null), arrotonda2(versAnno), null, null, arrotonda2(totAnno), arrotonda2(provAnno)]);
+  righe.push(['TOTALE ANNO', ...d.voci.map((v, col)=>{ let t = 0, ok = false; d.celle.forEach(r => { if(typeof r[col] === 'number'){ t += r[col]; ok = true; } }); return ok ? arrotonda2(t) : null; }), arrotonda2(versAnno), null, null, arrotonda2(totAnno), arrotonda2(provAnno)]);
   scaricaTabella(`Spese_stimate_future_${presunteAnno}`, intest, righe);
 }
 

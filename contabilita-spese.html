@@ -34,7 +34,7 @@
   body{
     padding: 18px;
   }
-  h1,h2,h3{ font-family:"Fraunces","Georgia",serif; font-weight:600; margin:0; }
+  h1,h2,h3{ font-family:inherit; font-weight:600; margin:0; }
 
   /* ---------- LOGIN ---------- */
   #login-screen{
@@ -96,7 +96,6 @@
   .row-viste .ctrl-presunte{ grid-column:4; }
   .row-viste .ctrl-fisse{ grid-column:5; }
   .row-mese .ctrl-riepilogo{ grid-column:5; }
-  .row-controls .ctrl-box select.sf-box-select#sel-presunte{ min-width:0; font-size:10px; padding-left:2px; padding-right:2px; }
   .ctrl-box label{
     font-size: 10px; text-transform:uppercase; letter-spacing: 0.2px;
     color:#a9bccf; font-weight:600; text-align:center;
@@ -228,7 +227,7 @@
 
   table.ledger td.riepilogo-mese-cell{
     background:#fff; border-radius:4px; padding: 11px 6px;
-    font-family:"Fraunces","Georgia",serif; font-weight:700; font-size:14px;
+    font-family:inherit; font-weight:700; font-size:14px;
     color:#fff; background: var(--green-deep); text-align:center;
   }
   table.ledger .riepilogo-valore{
@@ -261,7 +260,7 @@
     background:var(--paper); border:2px solid var(--gold); border-radius:12px; padding:22px 20px;
     max-width:420px; width:100%; color:var(--ink); box-shadow:0 12px 40px rgba(0,0,0,.45);
   }
-  .conferma-box h3{ margin:0 0 10px; font-size:18px; color:var(--green-deep); font-family:"Fraunces","Georgia",serif; }
+  .conferma-box h3{ margin:0 0 10px; font-size:18px; color:var(--green-deep); font-family:inherit; }
   .conferma-box p{ margin:0 0 8px; font-size:14px; line-height:1.5; }
   .conferma-box .conferma-nomi{ background:#fff; border-radius:8px; padding:10px 12px; font-size:14px; word-break:break-word; }
   .conferma-btns{ display:flex; gap:10px; margin-top:16px; }
@@ -294,7 +293,7 @@
   table.ledger.spese-fisse-table th.sf-totale, table.ledger.spese-fisse-table td.sf-totale{ width:120px; min-width:120px; max-width:120px; }
   table.ledger.spese-fisse-table th.sf-mese, table.ledger.spese-fisse-table td.sf-mese{
     position:sticky; left:0; z-index:2; background: var(--green-deep); color:#fff;
-    font-family:"Fraunces","Georgia",serif; font-weight:700; font-size:14px; text-align:center; border-radius:4px;
+    font-family:inherit; font-weight:700; font-size:14px; text-align:center; border-radius:4px;
   }
   table.ledger.spese-fisse-table th.sf-totale, table.ledger.spese-fisse-table td.sf-totale{
     position:sticky; right:0; z-index:2; background:#f9dcd9;
@@ -303,7 +302,6 @@
   
 
   #app.largo{ max-width:none; }
-  .ctrl-box select.sf-box-select#sel-presunte{ font-size:12.5px; min-width:150px; }
   .pr-voce{
     width:76px; height:64px; box-sizing:border-box; background:#fff; color:var(--green-deep); border:none; border-radius:6px;
     padding:5px 3px; font-family:inherit; font-weight:700; font-size:11px; line-height:1.25; text-align:center;
@@ -391,7 +389,6 @@
     .row-viste .ctrl-presunte, .row-viste .ctrl-fisse, .row-mese .ctrl-riepilogo{ grid-column:auto; }
     .row-mese .ctrl-riepilogo{ grid-column: span 2; }
     .row-controls .ctrl-box select.sf-box-select{ font-size:11.5px; padding-left:3px; padding-right:3px; }
-    .row-controls .ctrl-box select.sf-box-select#sel-presunte{ font-size:9.5px; }
     .row-summary{ grid-template-columns: repeat(2,1fr); }
     .row-summary .summary-box:last-child{ grid-column: span 2; }
     table.ledger{ min-width: 620px; }
@@ -446,7 +443,7 @@
     <div class="ctrl-box ctrl-presunte">
       <label>&nbsp;</label>
       <select id="sel-presunte" class="sf-box-select">
-        <option value="">Spese presunte anno successivo</option>
+        <option value="">Spese stimate future</option>
       </select>
     </div>
     <div class="ctrl-box ctrl-fisse">
@@ -551,7 +548,7 @@
 
   <div id="presunte-view" style="display:none;">
     <div class="riepilogo-header">
-      <h2 id="presunte-titolo">Spese presunte</h2>
+      <h2 id="presunte-titolo">Spese stimate future</h2>
       <div class="sf-azioni">
         <span class="status" id="presunte-status"></span>
         <button class="logout-btn" id="presunte-add-col" type="button">＋ Aggiungi colonna</button>
@@ -1590,7 +1587,7 @@ async function showPresunte(anno){
   controlliMese.style.display = 'none';
   presunteView.style.display = 'block';
   appEl.classList.add('largo');
-  presunteTitolo.textContent = `Spese presunte ${anno}`;
+  presunteTitolo.textContent = `Spese stimate future ${anno}`;
   presunteHead.innerHTML = '';
   presunteBody.innerHTML = '<tr><td style="text-align:center; padding:20px; color:var(--ink-soft); font-style:italic; background:transparent;">Caricamento…</td></tr>';
 
@@ -1831,7 +1828,7 @@ function aggiungiColonnaPresunte(){
 async function ricopiaPresunte(){
   if(!presunteDati || !presunteAnno) return;
   document.getElementById('conferma-titolo').textContent = 'Stai per effettuare una modifica';
-  document.getElementById('conferma-t1').textContent = `Stai per sostituire tutto il foglio Spese presunte ${presunteAnno}:`;
+  document.getElementById('conferma-t1').textContent = `Stai per sostituire tutto il foglio Spese stimate future ${presunteAnno}:`;
   document.getElementById('conferma-nomi').innerHTML = `Tutto quello che hai scritto qui sarà cancellato e il foglio ripartirà da una nuova copia del <b>Riepilogo Spese Fisse ${presunteAnno - 1}</b>.`;
   document.getElementById('conferma-t2').textContent = 'Le altre schede non vengono modificate.';
   const ok = await chiediConferma();
@@ -1862,7 +1859,7 @@ function esportaPresunte(){
     righe.push([MESI[m], ...d.celle[m].map(v => num(v)), vs, arrotonda2(primo), arrotonda2(ultimo), (conValori || num(d.totManuale[m]) !== null) ? arrotonda2(spese) : null, pv]);
   }
   righe.push(['TOTALE ANNO', ...d.voci.map(()=>null), arrotonda2(versAnno), null, null, arrotonda2(totAnno), arrotonda2(provAnno)]);
-  scaricaTabella(`Spese_presunte_${presunteAnno}`, intest, righe);
+  scaricaTabella(`Spese_stimate_future_${presunteAnno}`, intest, righe);
 }
 
 async function showSpeseFisse(anno){

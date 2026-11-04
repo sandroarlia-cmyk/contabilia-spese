@@ -313,6 +313,35 @@
   .pr-calc.vuoto{ font-weight:400; border:1px solid var(--border); text-align:center; }
   table.ledger.presunte-table td.sf-provv input.pr-cell{ font-size:13px; padding-left:6px; padding-right:6px; }
   .sf-azioni .status{ align-self:center; }
+  .pr-vwrap{ position:relative; width:76px; margin:0 auto; }
+  .pr-del{
+    position:absolute; top:3px; right:3px; width:17px; height:17px; padding:0; line-height:15px; text-align:center;
+    border:none; border-radius:50%; background:#f3c5c0; color:#7c2a1e; font-weight:800; font-size:13px; cursor:pointer;
+  }
+  .pr-del:hover{ background:#e8968d; }
+  table.ledger.presunte-table td.sf-totale input.pr-cell{ background:#f9dcd9; border-color:var(--green-deep); font-size:14px; }
+  table.ledger.presunte-table td.sf-totale input.pr-cell:read-only{ cursor:default; }
+  table.ledger.presunte-table td.sf-totale input.pr-cell:placeholder-shown{ border:1px solid var(--border); background:#f9dcd9; }
+  #pr-vers-anno.sf-grande{ background:#fff; }
+  .pr-iniziale{ display:flex; align-items:center; gap:10px; margin:0 2px 12px; flex-wrap:wrap; color:#8ea3b8; font-size:12px; }
+  .pr-iniziale input{
+    width:150px; box-sizing:border-box; background:#fff; border:1.5px solid var(--green-deep); border-radius:6px; padding:8px 8px;
+    text-align:right; font-family:"JetBrains Mono","Courier New",monospace; font-weight:800; font-size:13px; color:#000;
+  }
+  #presunte-view th.sf-extra, #presunte-view td.sf-extra, #presunte-view th.sf-totale, #presunte-view td.sf-totale,
+  #presunte-view th.sf-provv, #presunte-view td.sf-provv{ width:132px; min-width:132px; max-width:132px; }
+  #presunte-view th.sf-extra .sf-voce, #presunte-view th.sf-totale .sf-voce, #presunte-view th.sf-provv .sf-voce{ width:124px; font-size:12px; }
+  #presunte-view th.sf-saldo .sf-voce{ background:#d3ecd6; }
+  #presunte-view th.sf-extra{ background: var(--green-deep); }
+  .pr-calc.saldo{ background:#d3ecd6; font-size:14px; }
+  .pr-calc.neg{ color:#b3261e; background:#fff2a8; font-size:15px; }
+  #presunte-view tr.sf-riga-totale td.sf-totale, #presunte-view tr.sf-riga-totale td.sf-provv, #presunte-view tr.sf-riga-totale td.sf-extra{ background:var(--paper); }
+  @media (min-width:701px){
+    #presunte-view th.sf-totale, #presunte-view td.sf-totale{ position:sticky; right:132px; z-index:2; }
+    #presunte-view th.sf-provv, #presunte-view td.sf-provv{ position:sticky; right:0; z-index:2; }
+    #presunte-view td.sf-provv{ background:var(--paper); }
+    #presunte-view .ledger-wrap{ padding-right:0; }
+  }
   .sf-azioni{ display:flex; gap:10px; flex-wrap:wrap; }
   .logout-btn.sf-export{ border-color: var(--gold); color:#f2d98a; font-weight:700; }
   .ricalcola-top{ display:flex; justify-content:flex-end; margin-bottom:14px; }
@@ -505,12 +534,18 @@
       <div class="sf-azioni">
         <span class="status" id="presunte-status"></span>
         <button class="logout-btn" id="presunte-add-col" type="button">＋ Aggiungi colonna</button>
+        <button class="logout-btn" id="presunte-del-vuote" type="button">🗑 Elimina colonne vuote</button>
+        <button class="logout-btn" id="presunte-del-tutte" type="button">🗑 Elimina tutte le colonne voci</button>
         <button class="logout-btn" id="presunte-ricopia" type="button">↺ Ricopia dal Riepilogo Spese Fisse</button>
         <button class="logout-btn sf-export" id="presunte-export" type="button">⬇ Esporta in Excel</button>
         <button class="logout-btn" id="presunte-back" type="button">← Torna alla contabilità</button>
       </div>
     </div>
     <p class="sf-nota" id="presunte-nota">Foglio libero: scrivi e modifica dove vuoi. Non è collegato alle altre schede e non cambia nessun dato. I totali si calcolano da soli.</p>
+    <div class="pr-iniziale">
+      <label for="pr-saldo-iniziale">Saldo di partenza su C/C (a fine anno precedente, lo puoi cambiare):</label>
+      <input type="text" inputmode="decimal" id="pr-saldo-iniziale" autocomplete="off" placeholder="€ 0,00">
+    </div>
     <div class="ledger-wrap">
       <table class="ledger spese-fisse-table presunte-table">
         <thead id="presunte-head"></thead>
@@ -1353,6 +1388,8 @@ function startApp(){
   document.getElementById('presunte-back').addEventListener('click', tornaAllaContabilita);
   document.getElementById('presunte-export').addEventListener('click', esportaPresunte);
   document.getElementById('presunte-add-col').addEventListener('click', aggiungiColonnaPresunte);
+  document.getElementById('presunte-del-vuote').addEventListener('click', ()=> eliminaColonnePresunte('vuote'));
+  document.getElementById('presunte-del-tutte').addEventListener('click', ()=> eliminaColonnePresunte('tutte'));
   document.getElementById('presunte-ricopia').addEventListener('click', ricopiaPresunte);
   document.getElementById('riepilogo-back').addEventListener('click', tornaAllaContabilita);
   document.getElementById('spese-fisse-back').addEventListener('click', tornaAllaContabilita);
@@ -1461,6 +1498,21 @@ function esportaSpeseFisse(){
 //  SPESE PRESUNTE ANNO SUCCESSIVO (foglio libero, non sincronizzato)
 // =====================================================
 const PR_MIN_COLONNE = 12;
+function colonneNecessarie(){
+  const fissi = 48 + 92 + 5 * 132;
+  return Math.max(PR_MIN_COLONNE, Math.floor((window.innerWidth - fissi) / 86));
+}
+async function completaFoglioPresunte(doc, anno){
+  let mod = false;
+  if(!Array.isArray(doc.vers) || doc.vers.length !== 12){ doc.vers = Array(12).fill(null); mod = true; }
+  if(!Array.isArray(doc.totManuale) || doc.totManuale.length !== 12){ doc.totManuale = Array(12).fill(null); mod = true; }
+  if(typeof doc.saldoIniziale !== 'number'){ doc.saldoIniziale = arrotonda2(await calcolaSaldoPrecedente(anno, 1)); mod = true; }
+  if(doc.riempi !== false){
+    const need = colonneNecessarie();
+    while(doc.voci.length < need){ doc.voci.push(''); doc.celle.forEach(r => r.push(null)); mod = true; }
+  }
+  return mod;
+}
 let presunteDati = null, presunteAnno = null, presunteTimer = null;
 
 function arrotonda2(n){ return Math.round(n * 100) / 100; }
@@ -1492,14 +1544,14 @@ async function leggiSpeseFisseAnno(anno){
   };
 }
 
-function nuovoFoglioDa(src, copiatoDa){
-  const nCol = Math.max(PR_MIN_COLONNE, src.colonne.length + 4);
+function nuovoFoglioDa(src, copiatoDa, saldoIniziale){
+  const nCol = Math.max(colonneNecessarie(), src.colonne.length + 6);
   const voci = [], celle = src.celle.map(()=>[]);
   for(let c=0; c<nCol; c++){
     voci.push(c < src.colonne.length ? src.colonne[c] : '');
     src.celle.forEach((riga, r)=> celle[r].push(c < src.colonne.length ? riga[c] : null));
   }
-  return { voci, celle, provv: src.provv.slice(), copiatoDa };
+  return { voci, celle, provv: src.provv.slice(), vers: Array(12).fill(null), totManuale: Array(12).fill(null), saldoIniziale, copiatoDa };
 }
 
 function nascondiPresunte(){
@@ -1530,13 +1582,15 @@ async function showPresunte(anno){
   let nuovo = false;
   if(!doc || !Array.isArray(doc.voci)){
     const src = await leggiSpeseFisseAnno(anno - 1);
-    doc = nuovoFoglioDa(src, anno - 1);
+    const sp = arrotonda2(await calcolaSaldoPrecedente(anno, 1));
+    doc = nuovoFoglioDa(src, anno - 1, sp);
     nuovo = true;
   }
+  const mod = await completaFoglioPresunte(doc, anno);
   presunteDati = doc;
   presunteAnno = anno;
   disegnaPresunte();
-  if(nuovo){ await salvaPresunte(); }
+  if(nuovo || mod){ await salvaPresunte(); }
 }
 
 function celleTesto(v){ return (v === null || v === undefined || v === '') ? '' : formatEuro(v); }
@@ -1545,8 +1599,11 @@ function disegnaPresunte(){
   const d = presunteDati;
   let h = '<tr><th class="sf-mese">Mese</th>';
   d.voci.forEach((v, c)=>{
-    h += `<th><textarea class="pr-voce" data-c="${c}" rows="4" maxlength="80" placeholder="Voce">${escapeHtml(v)}</textarea></th>`;
+    h += `<th><div class="pr-vwrap"><textarea class="pr-voce" data-c="${c}" rows="4" maxlength="80" placeholder="Voce">${escapeHtml(v)}</textarea><button type="button" class="pr-del" data-c="${c}" title="Elimina questa colonna">×</button></div></th>`;
   });
+  h += '<th class="sf-extra"><div class="sf-voce">Versamento su C/C</div></th>';
+  h += '<th class="sf-extra sf-saldo"><div class="sf-voce">Saldo Primo del Mese su C/C</div></th>';
+  h += '<th class="sf-extra sf-saldo"><div class="sf-voce">Saldo Ultimo del Mese C/C</div></th>';
   h += '<th class="sf-totale"><div class="sf-voce sf-voce-tot">Totale spese del mese</div></th>';
   h += '<th class="sf-provv"><div class="sf-voce">Provvigioni</div></th></tr>';
   presunteHead.innerHTML = h;
@@ -1557,38 +1614,65 @@ function disegnaPresunte(){
     for(let c=0; c<d.voci.length; c++){
       b += `<td><input type="text" inputmode="decimal" class="pr-cell" data-m="${m}" data-c="${c}" placeholder="—" autocomplete="off" value="${escapeHtml(celleTesto(d.celle[m][c]))}"></td>`;
     }
-    b += `<td class="sf-totale"><div class="pr-calc vuoto" id="pr-tot-${m}">—</div></td>`;
+    b += `<td class="sf-extra"><input type="text" inputmode="decimal" class="pr-cell" data-m="${m}" data-v="1" placeholder="—" autocomplete="off" value="${escapeHtml(celleTesto(d.vers[m]))}"></td>`;
+    b += `<td class="sf-extra"><div class="pr-calc saldo" id="pr-sp-${m}">—</div></td>`;
+    b += `<td class="sf-extra"><div class="pr-calc saldo" id="pr-su-${m}">—</div></td>`;
+    b += `<td class="sf-totale"><input type="text" inputmode="decimal" class="pr-cell" id="pr-tot-${m}" data-m="${m}" data-t="1" placeholder="—" autocomplete="off"></td>`;
     b += `<td class="sf-provv"><input type="text" inputmode="decimal" class="pr-cell" data-m="${m}" data-p="1" placeholder="—" autocomplete="off" value="${escapeHtml(celleTesto(d.provv[m]))}"></td></tr>`;
   }
   b += '<tr class="sf-riga-totale"><td class="sf-mese">TOTALE ANNO</td>';
   for(let c=0; c<d.voci.length; c++){ b += '<td></td>'; }
+  b += '<td class="sf-extra"><div class="sf-grande" id="pr-vers-anno">€ 0,00</div></td><td class="sf-extra"></td><td class="sf-extra"></td>';
   b += '<td class="sf-totale"><div class="sf-grande" id="pr-tot-anno">€ 0,00</div></td>';
   b += '<td class="sf-provv"><div class="sf-grande" id="pr-prov-anno">€ 0,00</div></td></tr>';
   presunteBody.innerHTML = b;
 
+  document.getElementById('pr-saldo-iniziale').value = formatEuro(d.saldoIniziale || 0);
   const nota = document.getElementById('presunte-nota');
   nota.textContent = (d.copiatoDa ? `Partito come copia del Riepilogo Spese Fisse ${d.copiatoDa}. ` : '') +
-    'Ora è un foglio libero: scrivi e modifica dove vuoi. Non è collegato alle altre schede e non cambia nessun dato. I totali si calcolano da soli.';
+    'Ora è un foglio libero: scrivi e modifica dove vuoi. Non è collegato alle altre schede e non cambia nessun dato. I totali e i saldi si calcolano da soli. ' +
+    'Se un mese non ha voci, puoi scrivere il totale spese a mano nella casella rosa.';
   aggiornaTotaliPresunte();
 }
 
 function aggiornaTotaliPresunte(){
   const d = presunteDati;
-  let totAnno = 0, provAnno = 0;
+  const num = v => (typeof v === 'number' && !isNaN(v)) ? v : 0;
+  let totAnno = 0, provAnno = 0, versAnno = 0;
+  let carry = num(d.saldoIniziale);
+  const mostra = (id, val)=>{
+    const el = document.getElementById(id);
+    if(!el) return;
+    el.textContent = formatEuro(arrotonda2(val));
+    el.classList.toggle('neg', val < -0.004);
+  };
   for(let m=0; m<12; m++){
     let somma = 0, conValori = false;
     d.celle[m].forEach(v => { if(typeof v === 'number' && !isNaN(v)){ somma += v; conValori = true; } });
     const el = document.getElementById('pr-tot-' + m);
-    if(el){
-      if(conValori){ el.textContent = formatEuro(arrotonda2(somma)); el.classList.remove('vuoto'); }
-      else { el.textContent = '—'; el.classList.add('vuoto'); }
+    let spese;
+    if(conValori){
+      spese = somma;
+      if(el){ el.readOnly = true; el.value = formatEuro(arrotonda2(somma)); }
+    } else {
+      spese = num(d.totManuale[m]);
+      if(el){
+        el.readOnly = false;
+        if(document.activeElement !== el){ el.value = (typeof d.totManuale[m] === 'number') ? formatEuro(d.totManuale[m]) : ''; }
+      }
     }
-    totAnno += somma;
-    if(typeof d.provv[m] === 'number' && !isNaN(d.provv[m])) provAnno += d.provv[m];
+    const pv = num(d.provv[m]), vs = num(d.vers[m]);
+    const primo = carry + pv + vs;
+    const ultimo = primo - spese;
+    mostra('pr-sp-' + m, primo);
+    mostra('pr-su-' + m, ultimo);
+    carry = ultimo;
+    totAnno += spese; provAnno += pv; versAnno += vs;
   }
-  const a = document.getElementById('pr-tot-anno'), b = document.getElementById('pr-prov-anno');
+  const a = document.getElementById('pr-tot-anno'), b = document.getElementById('pr-prov-anno'), c = document.getElementById('pr-vers-anno');
   if(a) a.textContent = formatEuro(arrotonda2(totAnno));
   if(b) b.textContent = formatEuro(arrotonda2(provAnno));
+  if(c) c.textContent = formatEuro(arrotonda2(versAnno));
 }
 
 function queuePresunte(){
@@ -1619,6 +1703,8 @@ presunteBody.addEventListener('input', (e)=>{
   const m = parseInt(t.dataset.m);
   const v = valoreCella(t.value);
   if(t.dataset.p){ presunteDati.provv[m] = v; }
+  else if(t.dataset.v){ presunteDati.vers[m] = v; }
+  else if(t.dataset.t){ presunteDati.totManuale[m] = v; }
   else { presunteDati.celle[m][parseInt(t.dataset.c)] = v; }
   aggiornaTotaliPresunte();
   queuePresunte();
@@ -1642,7 +1728,10 @@ presunteBody.addEventListener('keydown', (e)=>{
   e.preventDefault();
   const m = parseInt(t.dataset.m) + dm;
   if(m < 0 || m > 11) return;
-  const sel = t.dataset.p ? `input.pr-cell[data-m="${m}"][data-p="1"]` : `input.pr-cell[data-m="${m}"][data-c="${t.dataset.c}"]`;
+  const sel = t.dataset.p ? `input.pr-cell[data-m="${m}"][data-p="1"]`
+    : t.dataset.v ? `input.pr-cell[data-m="${m}"][data-v="1"]`
+    : t.dataset.t ? `input.pr-cell[data-m="${m}"][data-t="1"]`
+    : `input.pr-cell[data-m="${m}"][data-c="${t.dataset.c}"]`;
   const next = presunteBody.querySelector(sel);
   if(next) next.focus();
 });
@@ -1655,6 +1744,58 @@ presunteHead.addEventListener('input', (e)=>{
 presunteHead.addEventListener('keydown', (e)=>{
   if(e.target.classList.contains('pr-voce') && e.key === 'Enter'){ e.preventDefault(); }
 });
+
+document.getElementById('pr-saldo-iniziale').addEventListener('input', (e)=>{
+  if(!presunteDati) return;
+  const v = valoreCella(e.target.value);
+  presunteDati.saldoIniziale = v === null ? 0 : v;
+  aggiornaTotaliPresunte();
+  queuePresunte();
+});
+document.getElementById('pr-saldo-iniziale').addEventListener('change', (e)=>{
+  const v = valoreCella(e.target.value);
+  e.target.value = formatEuro(v === null ? 0 : v);
+});
+document.getElementById('pr-saldo-iniziale').addEventListener('focus', (e)=>{ setTimeout(()=> e.target.select(), 0); });
+
+presunteHead.addEventListener('click', (e)=>{
+  const btn = e.target.closest ? e.target.closest('.pr-del') : null;
+  if(!btn || !presunteDati) return;
+  eliminaColonnePresunte('una', parseInt(btn.dataset.c));
+});
+
+async function eliminaColonnePresunte(modo, indice){
+  const d = presunteDati;
+  if(!d) return;
+  const haDati = c => (d.voci[c] || '').trim() !== '' || d.celle.some(r => typeof r[c] === 'number');
+  let daEliminare = [];
+  if(modo === 'una'){ daEliminare = [indice]; }
+  else if(modo === 'vuote'){ d.voci.forEach((v, c)=>{ if(!haDati(c)) daEliminare.push(c); }); }
+  else { d.voci.forEach((v, c)=> daEliminare.push(c)); }
+  if(daEliminare.length === 0){
+    document.getElementById('conferma-titolo').textContent = 'Nessuna colonna da eliminare';
+    document.getElementById('conferma-t1').textContent = 'Non ci sono colonne vuote.';
+    document.getElementById('conferma-nomi').textContent = 'Tutte le colonne contengono un nome o degli importi.';
+    document.getElementById('conferma-t2').textContent = '';
+    await chiediConferma();
+    return;
+  }
+  const conDati = daEliminare.filter(haDati).length;
+  document.getElementById('conferma-titolo').textContent = 'Stai per effettuare una modifica';
+  document.getElementById('conferma-t1').textContent = daEliminare.length === 1 ? 'Stai per eliminare 1 colonna:' : `Stai per eliminare ${daEliminare.length} colonne:`;
+  let nomi = daEliminare.slice(0, 6).map(c => '<b>' + escapeHtml((d.voci[c] || '').trim() || ('colonna ' + (c + 1) + ' (vuota)')) + '</b>').join(', ');
+  if(daEliminare.length > 6){ nomi += ` e altre ${daEliminare.length - 6}`; }
+  document.getElementById('conferma-nomi').innerHTML = nomi + (conDati ? `<br><br>Attenzione: ${conDati === 1 ? 'una colonna contiene' : conDati + ' colonne contengono'} nomi o importi, che andranno persi.` : '');
+  document.getElementById('conferma-t2').textContent = 'Restano sempre Versamento, Saldo Primo, Saldo Ultimo, Totale spese e Provvigioni. Le altre schede non vengono modificate.';
+  const ok = await chiediConferma();
+  if(!ok) return;
+  const set = new Set(daEliminare);
+  d.voci = d.voci.filter((v, c)=> !set.has(c));
+  d.celle = d.celle.map(r => r.filter((v, c)=> !set.has(c)));
+  d.riempi = false;
+  disegnaPresunte();
+  await salvaPresunte();
+}
 
 function aggiungiColonnaPresunte(){
   if(!presunteDati) return;
@@ -1675,7 +1816,8 @@ async function ricopiaPresunte(){
   const ok = await chiediConferma();
   if(!ok) return;
   const src = await leggiSpeseFisseAnno(presunteAnno - 1);
-  presunteDati = nuovoFoglioDa(src, presunteAnno - 1);
+  const sp = arrotonda2(await calcolaSaldoPrecedente(presunteAnno, 1));
+  presunteDati = nuovoFoglioDa(src, presunteAnno - 1, sp);
   disegnaPresunte();
   await salvaPresunte();
 }
@@ -1683,17 +1825,22 @@ async function ricopiaPresunte(){
 function esportaPresunte(){
   const d = presunteDati;
   if(!d){ return; }
-  const intest = ['Mese', ...d.voci.map((v, i)=> v.trim() || ('Colonna ' + (i + 1))), 'Totale spese del mese', 'Provvigioni'];
+  const num = v => (typeof v === 'number' && !isNaN(v)) ? v : null;
+  const intest = ['Mese', ...d.voci.map((v, i)=> v.trim() || ('Colonna ' + (i + 1))),
+    'Versamento su C/C', 'Saldo Primo del Mese su C/C', 'Saldo Ultimo del Mese C/C', 'Totale spese del mese', 'Provvigioni'];
   const righe = [intest];
-  let totAnno = 0, provAnno = 0;
+  let totAnno = 0, provAnno = 0, versAnno = 0, carry = num(d.saldoIniziale) || 0;
   for(let m=0; m<12; m++){
     let somma = 0, conValori = false;
     d.celle[m].forEach(v => { if(typeof v === 'number'){ somma += v; conValori = true; } });
-    const pv = (typeof d.provv[m] === 'number') ? d.provv[m] : null;
-    totAnno += somma; if(pv !== null) provAnno += pv;
-    righe.push([MESI[m], ...d.celle[m].map(v => (typeof v === 'number' ? v : null)), conValori ? arrotonda2(somma) : null, pv]);
+    const spese = conValori ? somma : (num(d.totManuale[m]) || 0);
+    const pv = num(d.provv[m]), vs = num(d.vers[m]);
+    const primo = carry + (pv || 0) + (vs || 0), ultimo = primo - spese;
+    carry = ultimo;
+    totAnno += spese; provAnno += (pv || 0); versAnno += (vs || 0);
+    righe.push([MESI[m], ...d.celle[m].map(v => num(v)), vs, arrotonda2(primo), arrotonda2(ultimo), (conValori || num(d.totManuale[m]) !== null) ? arrotonda2(spese) : null, pv]);
   }
-  righe.push(['TOTALE ANNO', ...d.voci.map(()=>null), arrotonda2(totAnno), arrotonda2(provAnno)]);
+  righe.push(['TOTALE ANNO', ...d.voci.map(()=>null), arrotonda2(versAnno), null, null, arrotonda2(totAnno), arrotonda2(provAnno)]);
   scaricaTabella(`Spese_presunte_${presunteAnno}`, intest, righe);
 }
 

@@ -206,6 +206,19 @@
     background: #d3ecd6; border: 1px solid #9ccca1; border-radius: 6px;
   }
   tr.row-note td.col-rimanenza{ color: var(--ink-soft); font-style: italic; }
+  .note-extra-bar{ display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin:12px 2px 4px; color:#8ea3b8; font-size:12px; }
+  .btn-crea-nota{
+    background:#d3ecd6; color:var(--green-deep); border:2px solid #9ccca1; border-radius:8px; padding:10px 16px;
+    font-family:inherit; font-size:14px; font-weight:700; cursor:pointer;
+  }
+  .btn-crea-nota:hover{ background:#c3e3c7; }
+  .note-del{
+    width:26px; height:26px; border:1px solid #9ccca1; background:#d3ecd6; color:#7c2a1e; border-radius:6px;
+    font-size:15px; font-weight:800; cursor:pointer; line-height:1; padding:0;
+  }
+  .note-del:hover{ background:#f3c5c0; }
+  tr.row-note-extra input{ background:#d3ecd6; border:1px solid #9ccca1; border-radius:6px; }
+  tr.row-note-extra input:focus{ background:#fff; }
   th.col-data{ width:110px; } th.col-spese{ width:170px; } th.col-importo{ width:130px; } th.col-stato{ width:110px; } th.col-rimanenza{ width:140px; } th.col-move{ width:64px; }
   td.col-move{ text-align:center; white-space:nowrap; padding: 3px 4px; }
   .move-btn{
@@ -537,7 +550,12 @@
         </tr>
       </thead>
       <tbody id="ledger-body"></tbody>
+      <tbody id="ledger-body-note"></tbody>
     </table>
+  </div>
+  <div class="note-extra-bar">
+    <button type="button" id="btn-crea-nota" class="btn-crea-nota">＋ Crea riga verde (nota)</button>
+    <span>Righe di appunti: non contano nei calcoli e valgono solo per questo mese.</span>
   </div>
 
   <p class="footer-note">Contabilità Spese &middot; dati salvati automaticamente per anno e mese selezionati</p>
@@ -817,6 +835,7 @@ const valDifferenza = document.getElementById('val-differenza');
 const valSpese = document.getElementById('val-spese');
 const boxDifferenza = document.getElementById('box-differenza');
 const ledgerBody = document.getElementById('ledger-body');
+const ledgerBodyNote = document.getElementById('ledger-body-note');
 const saveStatus = document.getElementById('save-status');
 const selRiepilogoAnno = document.getElementById('sel-riepilogo-anno');
 const mainContent = document.getElementById('main-content');
@@ -1033,6 +1052,56 @@ function populateRows(rows){
     lockRow(i, stato === 'ripeti');
   });
 }
+
+// ---------- RIGHE VERDI DI NOTA EXTRA (solo per il mese aperto, fuori dai calcoli) ----------
+function aggiungiRigaNota(v){
+  v = v || {};
+  const anno = parseInt(selAnno.value), mese = parseInt(selMese.value);
+  const defaultData = `${anno}-${pad(mese)}-01`;
+  const tr = document.createElement('tr');
+  tr.className = 'row-note row-note-extra';
+  tr.innerHTML = `
+    <td class="col-move"><button type="button" class="note-del" title="Elimina questa riga">×</button></td>
+    <td><input type="date" data-nx="data"></td>
+    <td><input type="text" data-nx="spese" placeholder="Nota (non conta nei calcoli)" autocomplete="off"></td>
+    <td class="col-importo"><input type="text" inputmode="decimal" data-nx="importo" placeholder="0,00"></td>
+    <td class="col-stato"></td>
+    <td class="col-rimanenza">—</td>`;
+  const q = f => tr.querySelector(`input[data-nx="${f}"]`);
+  q('data').value = v.data || defaultData;
+  q('spese').value = v.spese || '';
+  q('importo').value = v.importo ? formatEuro(parseFloat(v.importo)) : '';
+  tr.querySelectorAll('input').forEach(inp => inp.addEventListener('input', queueSave));
+  const imp = q('importo');
+  imp.addEventListener('focus', ()=>{ const raw = parseEuro(imp.value); imp.value = isNaN(raw) ? '' : String(raw).replace('.', ','); });
+  imp.addEventListener('blur', ()=>{ const raw = parseEuro(imp.value); imp.value = isNaN(raw) ? '' : formatEuro(raw); queueSave(); });
+  tr.querySelector('.note-del').addEventListener('click', async ()=>{
+    const testo = q('spese').value.trim();
+    document.getElementById('conferma-titolo').textContent = 'Stai per effettuare una modifica';
+    document.getElementById('conferma-t1').textContent = 'Stai per eliminare questa riga verde di nota:';
+    document.getElementById('conferma-nomi').innerHTML = `<b>${escapeHtml(testo || '(riga vuota)')}</b>`;
+    document.getElementById('conferma-t2').textContent = 'Le altre righe e i calcoli non vengono modificati.';
+    const ok = await chiediConferma();
+    if(!ok) return;
+    tr.remove();
+    queueSave();
+  });
+  ledgerBodyNote.appendChild(tr);
+  return tr;
+}
+function leggiNoteExtra(){
+  return [...ledgerBodyNote.querySelectorAll('tr')].map(tr => {
+    const q = f => tr.querySelector(`input[data-nx="${f}"]`).value;
+    const n = parseEuro(q('importo'));
+    return { data: q('data'), spese: q('spese'), importo: isNaN(n) ? '' : String(n) };
+  });
+}
+document.getElementById('btn-crea-nota').addEventListener('click', ()=>{
+  const tr = aggiungiRigaNota({});
+  const inp = tr.querySelector('input[data-nx="spese"]');
+  if(inp) inp.focus();
+  queueSave();
+});
 
 function currentRows(){
   const rows = [];
@@ -1304,6 +1373,8 @@ async function loadPeriod(){
 
   buildRows();
   populateRows(rows);
+  ledgerBodyNote.innerHTML = '';
+  ((data && Array.isArray(data.noteExtra)) ? data.noteExtra : []).forEach(aggiungiRigaNota);
 
   if(data){
     inCorrezioni.value = data.correzioni ? formatEuro(parseFloat(data.correzioni)) : '';
@@ -1340,7 +1411,8 @@ async function savePeriod(){
     correzioni: isNaN(correzioniRaw) ? '' : String(correzioniRaw),
     provvigioni: isNaN(provvigioniRaw) ? '' : String(provvigioniRaw),
     versamento: isNaN(versamentoRaw) ? '' : String(versamentoRaw),
-    rows: currentRows()
+    rows: currentRows(),
+    noteExtra: leggiNoteExtra()
   };
   try{
     await store.set(currentKey, JSON.stringify(payload), false);

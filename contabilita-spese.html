@@ -484,6 +484,13 @@
   }
   .ctrl-box select.sf-box-select{ color:transparent; text-shadow:none; }
   .ctrl-box select.sf-box-select option{ color:#111; font-weight:700; }
+
+  /* Riepilogo Anno: intestazioni +4pt, maiuscolo, grassetto, centrate; valori centrati */
+  #riepilogo-view table.ledger thead th{ font-size:15px; font-weight:800; text-transform:uppercase; text-align:center; letter-spacing:0.3px; }
+  #riepilogo-view table.ledger th.c-spese{ background:#f9dcd9 !important; color:#000 !important; }
+  #riepilogo-view table.ledger th.c-prov{ background:#d3ecd6 !important; color:#000 !important; }
+  #riepilogo-view table.ledger .riepilogo-valore{ text-align:center; }
+  table.ledger td.riepilogo-prov .riepilogo-valore{ background:#d3ecd6 !important; }
 </style>
 </head>
 <body>
@@ -628,11 +635,11 @@
         <thead>
           <tr>
             <th>Mese</th>
-            <th class="c-primo">Saldo Primo del Mese su C/C</th>
-            <th class="c-ultimo">Saldo Ultimo del Mese C/C</th>
             <th class="c-vers">Versamento su C/C</th>
-            <th>Spese</th>
-            <th>Provvigioni</th>
+            <th class="c-primo">Saldo Primo del Mese su C/C</th>
+            <th class="c-spese">Spese</th>
+            <th class="c-prov">Provvigioni</th>
+            <th class="c-ultimo">Saldo Ultimo del Mese C/C</th>
           </tr>
         </thead>
         <tbody id="riepilogo-body"></tbody>
@@ -2243,21 +2250,21 @@ async function showRiepilogo(anno){
     if(!riga){
       tr.innerHTML = `
         <td class="riepilogo-mese-cell">${nomeMese}</td>
-        <td class="riepilogo-saldo-primo"><span class="riepilogo-valore vuoto">—</span></td>
-        <td class="riepilogo-saldo-ultimo"><span class="riepilogo-valore vuoto">—</span></td>
         <td class="riepilogo-vers"><span class="riepilogo-valore vuoto">—</span></td>
+        <td class="riepilogo-saldo-primo"><span class="riepilogo-valore vuoto">—</span></td>
         <td class="riepilogo-spese"><span class="riepilogo-valore vuoto">—</span></td>
-        <td><span class="riepilogo-valore vuoto">—</span></td>
+        <td class="riepilogo-prov"><span class="riepilogo-valore vuoto">—</span></td>
+        <td class="riepilogo-saldo-ultimo"><span class="riepilogo-valore vuoto">—</span></td>
       `;
     } else {
       const cella = (val)=> `<span class="riepilogo-valore${val < 0 ? ' negativo' : ''}">${formatEuro(val)}</span>`;
       tr.innerHTML = `
         <td class="riepilogo-mese-cell">${nomeMese}</td>
-        <td class="riepilogo-saldo-primo">${cella(riga.saldoAttuale)}</td>
-        <td class="riepilogo-saldo-ultimo">${cella(riga.differenza)}</td>
         <td class="riepilogo-vers">${cella(riga.versamento)}</td>
+        <td class="riepilogo-saldo-primo">${cella(riga.saldoAttuale)}</td>
         <td class="riepilogo-spese">${cella(riga.spese)}</td>
-        <td>${cella(riga.provvigioni)}</td>
+        <td class="riepilogo-prov">${cella(riga.provvigioni)}</td>
+        <td class="riepilogo-saldo-ultimo">${cella(riga.differenza)}</td>
       `;
     }
     riepilogoBody.appendChild(tr);
@@ -2278,11 +2285,11 @@ async function showRiepilogo(anno){
   trTot.className = 'riepilogo-totale';
   trTot.innerHTML = `
     <td class="riepilogo-mese-cell">TOTALE</td>
-    <td class="riepilogo-saldo-primo">${cellaTot(tot.saldoAttuale)}</td>
-    <td class="riepilogo-saldo-ultimo">${cellaTot(tot.differenza)}</td>
     <td class="riepilogo-vers">${cellaTot(tot.versamento)}</td>
+    <td class="riepilogo-saldo-primo">${cellaTot(tot.saldoAttuale)}</td>
     <td class="riepilogo-spese">${cellaTot(tot.spese)}</td>
-    <td>${cellaTot(tot.provvigioni)}</td>
+    <td class="riepilogo-prov">${cellaTot(tot.provvigioni)}</td>
+    <td class="riepilogo-saldo-ultimo">${cellaTot(tot.differenza)}</td>
   `;
   riepilogoBody.appendChild(trTot);
 }

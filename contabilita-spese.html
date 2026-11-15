@@ -491,6 +491,26 @@
   #riepilogo-view table.ledger th.c-prov{ background:#d3ecd6 !important; color:#000 !important; }
   #riepilogo-view table.ledger .riepilogo-valore{ text-align:center; }
   table.ledger td.riepilogo-prov .riepilogo-valore{ background:#d3ecd6 !important; }
+
+  /* Sintesi contabile mensile: tutti i dati contabili della stessa grandezza (come Saldo Primo) */
+  #riepilogo-view table.ledger .riepilogo-valore,
+  #riepilogo-view table.ledger .riepilogo-valore.negativo,
+  #riepilogo-view table.ledger .riepilogo-valore.vuoto,
+  #riepilogo-view table.ledger tr.riepilogo-totale .riepilogo-valore,
+  #riepilogo-view table.ledger tr.riepilogo-totale .riepilogo-valore.negativo{ font-size:18px !important; font-weight:800; }
+  /* Scheda Contabilità: riquadri dei valori tutti identici (stessa altezza e larghezza), fondo bianco */
+  .row-summary .summary-box input.value-input,
+  .row-summary .summary-box .value,
+  .row-summary .summary-box.negativo .value{
+    display:flex; align-items:center; justify-content:center; box-sizing:border-box;
+    width:92%; height:48px; background:#fff !important; border:1px solid var(--border); border-radius:6px;
+    font-family:"JetBrains Mono","Courier New",monospace; font-size:20px !important; font-weight:800;
+    padding:4px; text-align:center; white-space:nowrap; overflow:hidden;
+  }
+  .row-summary .summary-box.box-spese .value, .row-summary .summary-box.box-spese .value *{ color:#8b1a10 !important; }
+  .row-summary .summary-box input#in-provvigioni{ color:#0b5a2a !important; font-weight:800; }
+  .row-summary .summary-box input#in-provvigioni::placeholder{ color:#0b5a2a; opacity:.45; }
+  .row-mese .ctrl-box label{ min-height:30px; align-content:center; }
 </style>
 </head>
 <body>
@@ -570,7 +590,7 @@
       </div>
     </div>
     <div class="ctrl-box ctrl-riepilogo">
-      <label>Riepilogo Anno</label>
+      <label>Sintesi contabile mensile</label>
       <select id="sel-riepilogo-anno">
         <option value="">— seleziona —</option>
       </select>
@@ -627,7 +647,7 @@
 
   <div id="riepilogo-view" style="display:none;">
     <div class="riepilogo-header">
-      <h2 id="riepilogo-titolo">Riepilogo Anno</h2>
+      <h2 id="riepilogo-titolo">SINTESI CONTABILE MENSILE</h2>
       <button class="logout-btn" id="riepilogo-back">← Torna alla contabilità</button>
     </div>
     <div class="ledger-wrap">
@@ -2219,7 +2239,7 @@ async function showRiepilogo(anno){
   mainContent.style.display = 'none';
   controlliMese.style.display = 'none';
   riepilogoView.style.display = 'block';
-  riepilogoTitolo.textContent = `Riepilogo Anno ${anno}`;
+  riepilogoTitolo.textContent = `SINTESI CONTABILE MENSILE ${anno}`;
   riepilogoBody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:20px; color:var(--ink-soft); font-style:italic; background:transparent;">Caricamento…</td></tr>';
 
   let carry = await calcolaSaldoPrecedente(anno, 1);

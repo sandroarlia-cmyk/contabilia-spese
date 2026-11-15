@@ -541,7 +541,8 @@
   }
   .gr-bar{ cursor:pointer; }
   .gr-bar:hover{ filter:brightness(1.12); stroke:#10202f; stroke-width:1.5; }
-  .gr-edit summary{ cursor:pointer; font-weight:800; color:var(--green-deep); font-size:15px; }
+  .gr-edit{ border:2px dashed var(--gold); }
+  .gr-edit summary{ cursor:pointer; font-weight:800; color:var(--green-deep); font-size:15px; text-transform:uppercase; }
   .gr-ed{ border-collapse:separate; border-spacing:4px; min-width:900px; }
   .gr-ed th{ font-size:12px; font-weight:800; color:var(--ink); padding:4px 6px; }
   .gr-ed input{ width:78px; box-sizing:border-box; border:1px solid var(--border); border-radius:6px; padding:7px 4px; text-align:center;
@@ -2484,35 +2485,42 @@ async function showGrafici(){
   const anni = [];
   for(let a = GR_ANNO_INIZIO; a <= ultimo; a++) anni.push(a);
   const mk = campo => { const o = {}; anni.forEach(a => o[a] = Array(12).fill(0)); lette.forEach(r => { if(o[r.a]) o[r.a][r.m - 1] = Math.round(r[campo] * 100) / 100; }); return o; };
-  // provvigioni inserite a mano SOLO per i grafici (non toccano la contabilità)
+  corpo.innerHTML = '';
+  const sezioni = [
+    { titolo: 'Provvigioni', chiave: 'grafici:provvigioni', dati: mk('provv') },
+    { titolo: 'Spese fisse', chiave: 'grafici:spese', dati: mk('spese') },
+    { titolo: 'Carta di credito', chiave: 'grafici:carta', dati: mk('carta') }
+  ];
+  for(const sz of sezioni){ await grSezione(corpo, sz, anni); }
+}
+
+// Grafico + tabella di inserimento manuale (salvata a parte: non tocca mai la contabilità)
+async function grSezione(corpo, sz, anni){
   let manuale = {};
-  try{ const r = await store.get('grafici:provvigioni'); if(r && r.value){ manuale = JSON.parse(r.value) || {}; } } catch(e){ manuale = {}; }
-  const provvLedger = mk('provv');
-  const provvUnita = ()=>{
+  try{ const r = await store.get(sz.chiave); if(r && r.value){ manuale = JSON.parse(r.value) || {}; } } catch(e){ manuale = {}; }
+  const unita = ()=>{
     const o = {};
-    anni.forEach(a => { o[a] = provvLedger[a].map((v, i) => {
+    anni.forEach(a => { o[a] = sz.dati[a].map((v, i) => {
       const k = a + '-' + String(i + 1).padStart(2, '0');
       return (typeof manuale[k] === 'number') ? manuale[k] : v;
     }); });
     return o;
   };
-  corpo.innerHTML = '';
-  const hostProv = document.createElement('div');
-  corpo.appendChild(hostProv);
-  const ridisegnaProv = ()=>{ const tmp = document.createElement('div'); grDisegna(tmp, 'Provvigioni', anni, provvUnita()); hostProv.replaceChildren(...tmp.childNodes); };
-  ridisegnaProv();
+  const host = document.createElement('div');
+  corpo.appendChild(host);
+  const ridisegna = ()=>{ const tmp = document.createElement('div'); grDisegna(tmp, sz.titolo, anni, unita()); host.replaceChildren(...tmp.childNodes); };
+  ridisegna();
 
-  // editor manuale
   const det = document.createElement('details');
   det.className = 'gr-card gr-edit';
-  let h = '<summary>✎ Inserisci a mano le provvigioni dei mesi mancanti (solo per i grafici)</summary>' +
-    '<p class="sf-nota" style="color:var(--ink-soft)">Scrivi qui le provvigioni di 2025 e dei mesi senza dati: compaiono solo nel grafico PROVVIGIONI. Non cambiano la scheda Contabilità Spese, i saldi, il Riepilogo né nessun altro dato. Se lasci una casella vuota, il grafico usa il dato della contabilità (se c\'è).</p>' +
+  let h = `<summary>✎ Inserisci a mano ${escapeHtml(sz.titolo.toLowerCase())} dei mesi o anni mancanti (solo per questo grafico)</summary>` +
+    '<p class="sf-nota" style="color:var(--ink-soft)">Scrivi qui gli importi dei mesi senza dati: compaiono solo in questo grafico. Non cambiano la scheda Contabilità Spese, i saldi, il Riepilogo né nessun altro dato. Se lasci una casella vuota, il grafico usa il dato della contabilità (se c\'è); in grigio vedi quel dato.</p>' +
     '<div class="gr-scroll"><table class="gr-ed"><thead><tr><th>Anno</th>' + MESI.map(m => '<th>' + m.slice(0,3).toUpperCase() + '</th>').join('') + '</tr></thead><tbody>';
   anni.forEach(a => {
     h += '<tr><th>' + a + '</th>';
     for(let m = 1; m <= 12; m++){
       const k = a + '-' + String(m).padStart(2, '0');
-      const lv = provvLedger[a][m - 1];
+      const lv = sz.dati[a][m - 1];
       h += `<td><input type="text" inputmode="decimal" data-k="${k}" placeholder="${lv ? formatEuro(lv) : '—'}" value="${typeof manuale[k] === 'number' ? formatEuro(manuale[k]) : ''}" autocomplete="off"></td>`;
     }
     h += '</tr>';
@@ -2523,13 +2531,11 @@ async function showGrafici(){
     const n = parseEuro(t.value);
     if(isNaN(n) || t.value.trim() === ''){ delete manuale[t.dataset.k]; t.value = ''; }
     else { manuale[t.dataset.k] = Math.round(n * 100) / 100; t.value = formatEuro(manuale[t.dataset.k]); }
-    try{ await store.set('grafici:provvigioni', JSON.stringify(manuale)); } catch(err){ /* solo grafici */ }
-    ridisegnaProv();
+    try{ await store.set(sz.chiave, JSON.stringify(manuale)); } catch(err){ /* solo grafici */ }
+    ridisegna();
   });
   det.addEventListener('focusin', e => { if(e.target.tagName === 'INPUT') setTimeout(()=> e.target.select(), 0); });
   corpo.appendChild(det);
-  grDisegna(corpo, 'Spese fisse', anni, mk('spese'));
-  grDisegna(corpo, 'Carta di credito', anni, mk('carta'));
 }
 
 initLogin();

@@ -518,6 +518,29 @@
   #riepilogo-view table.ledger tbody tr, #riepilogo-view table.ledger tbody tr:nth-child(even){ background:#fff; }
   #riepilogo-view table.ledger thead th{ background-clip:content-box !important; padding:0 6px !important; height:44px; vertical-align:middle; }
   #riepilogo-view table.ledger thead th:first-child{ background-clip:border-box !important; padding:0 8px !important; }
+
+  .sf-grafici-btn{
+    height:var(--card-h1); width:100%; box-sizing:border-box; background:#fff; border:2px solid var(--gold); border-radius:8px;
+    color:var(--green-deep); font-weight:800; font-size:14px; text-transform:uppercase; font-family:inherit; cursor:pointer;
+  }
+  .sf-grafici-btn:hover{ background:#fbf6e6; }
+  .row-viste .ctrl-grafici{ grid-column:3; }
+  @media (max-width:700px){ .row-viste .ctrl-grafici{ grid-column:auto; } }
+  .gr-card{ background:var(--paper); border-radius:12px; padding:14px 14px 16px; margin-bottom:18px; color:var(--ink); }
+  .gr-card h3{ margin:0 0 10px; font-size:18px; font-weight:800; text-transform:uppercase; letter-spacing:.5px; color:var(--green-deep); }
+  .gr-scroll{ overflow-x:auto; }
+  .gr-scroll svg{ display:block; min-width:760px; width:100%; height:auto; }
+  .gr-tot{ display:flex; flex-wrap:wrap; gap:10px; margin-top:12px; }
+  .gr-chip{ display:flex; align-items:center; gap:8px; background:#fff; border:1px solid var(--border); border-radius:8px; padding:8px 12px; font-weight:800; font-size:15px; }
+  .gr-chip i{ width:14px; height:14px; border-radius:3px; display:inline-block; }
+  .gr-chip span.n{ font-family:"JetBrains Mono","Courier New",monospace; }
+  .gr-vuoto{ color:var(--ink-soft); font-style:italic; padding:14px 4px; }
+  #gr-tip{
+    position:fixed; z-index:9998; pointer-events:none; display:none; background:#10202f; color:#fff; border-radius:8px;
+    padding:8px 12px; font-size:14px; font-weight:700; box-shadow:0 6px 18px rgba(0,0,0,.35); white-space:nowrap;
+  }
+  .gr-bar{ cursor:pointer; }
+  .gr-bar:hover{ filter:brightness(1.12); stroke:#10202f; stroke-width:1.5; }
 </style>
 </head>
 <body>
@@ -561,6 +584,10 @@
   </div>
 
   <div class="row-controls row-viste">
+    <div class="ctrl-box ctrl-grafici">
+      <label>&nbsp;</label>
+      <button type="button" id="btn-grafici" class="sf-grafici-btn">GRAFICI</button>
+    </div>
     <div class="ctrl-box ctrl-presunte">
       <label>&nbsp;</label>
       <div class="sf-ovl" data-for="sel-presunte" data-t="Spese stimate future"></div>
@@ -698,6 +725,17 @@
         <tbody id="presunte-body"></tbody>
       </table>
     </div>
+  </div>
+
+  <div id="grafici-view" style="display:none;">
+    <div class="riepilogo-header">
+      <h2>GRAFICI</h2>
+      <div class="sf-azioni">
+        <button class="logout-btn" id="grafici-back" type="button">← Torna alla contabilità</button>
+      </div>
+    </div>
+    <p class="sf-nota">Solo visualizzazione, dal 2025 in poi: i dati arrivano da soli dalla scheda Contabilità Spese (stessi dati del Riepilogo Spese Fisse) e qui non si modificano. Passa il cursore (o tocca) una colonna per vedere l'importo del mese.</p>
+    <div id="grafici-corpo"></div>
   </div>
 
   <div id="spese-fisse-view" style="display:none;">
@@ -937,6 +975,7 @@ const riepilogoBody = document.getElementById('riepilogo-body');
 const selSpeseFisse = document.getElementById('sel-spese-fisse');
 const selPresunte = document.getElementById('sel-presunte');
 const presunteView = document.getElementById('presunte-view');
+const graficiView = document.getElementById('grafici-view');
 const presunteTitolo = document.getElementById('presunte-titolo');
 const presunteHead = document.getElementById('presunte-head');
 const presunteBody = document.getElementById('presunte-body');
@@ -1572,6 +1611,7 @@ function startApp(){
     if(anno){ showSpeseFisse(parseInt(anno)); }
   });
   function tornaAllaContabilita(){
+    graficiView.style.display = 'none';
     riepilogoView.style.display = 'none';
     speseFisseView.style.display = 'none';
     appEl.classList.remove('largo');
@@ -1586,6 +1626,8 @@ function startApp(){
     if(anno){ showPresunte(parseInt(anno)); }
   });
   document.getElementById('presunte-back').addEventListener('click', tornaAllaContabilita);
+  document.getElementById('grafici-back').addEventListener('click', tornaAllaContabilita);
+  document.getElementById('btn-grafici').addEventListener('click', showGrafici);
   document.getElementById('presunte-export').addEventListener('click', esportaPresunte);
   document.getElementById('presunte-add-col').addEventListener('click', aggiungiColonnaPresunte);
   document.getElementById('presunte-del-vuote').addEventListener('click', ()=> eliminaColonnePresunte('vuote'));
@@ -1810,6 +1852,7 @@ function sincronizzaDaPrincipale(doc, src, saldoSrc){
 function nascondiPresunte(){
   if(presunteView.style.display !== 'none'){ flushPresunte(); }
   presunteView.style.display = 'none';
+  graficiView.style.display = 'none';
   selPresunte.value = '';
 }
 
@@ -1820,6 +1863,7 @@ async function showPresunte(anno){
   selSpeseFisse.value = '';
   mainContent.style.display = 'none';
   controlliMese.style.display = 'none';
+  graficiView.style.display = 'none';
   presunteView.style.display = 'block';
   appEl.classList.add('largo');
   presunteTitolo.textContent = `Spese stimate future ${anno}`;
@@ -2319,6 +2363,125 @@ async function showRiepilogo(anno){
     <td class="riepilogo-saldo-ultimo">${cellaTot(tot.differenza)}</td>
   `;
   riepilogoBody.appendChild(trTot);
+}
+
+// =====================================================
+//  GRAFICI (solo lettura, dal 2025 in poi, dati dalla scheda principale)
+// =====================================================
+const GR_ANNO_INIZIO = 2025, GR_ANNO_MAX = 2035;
+const GR_COLORI = ['#2f7fc1','#e8833a','#2f9e6b','#c0509a','#8a63d2','#d9a441','#2aa5b3','#d1495b','#6b8e23','#555f9e','#b5651d'];
+function grEuro(n){
+  const neg = n < 0; n = Math.abs(n);
+  let t = (Math.round(n * 100) / 100).toFixed(2).replace('.', ',');
+  if(n >= 10000){ t = t.replace(/\B(?=(\d{3})+(?!\d))/g, '.'); }
+  return (neg ? '-' : '') + '€ ' + t;
+}
+let grTip = null;
+function grMostraTip(e, testo){
+  if(!grTip){ grTip = document.createElement('div'); grTip.id = 'gr-tip'; document.body.appendChild(grTip); }
+  grTip.textContent = testo; grTip.style.display = 'block';
+  const w = grTip.offsetWidth;
+  grTip.style.left = Math.max(6, Math.min(window.innerWidth - w - 6, e.clientX + 14)) + 'px';
+  grTip.style.top = Math.max(6, e.clientY - 44) + 'px';
+}
+function grNascondiTip(){ if(grTip) grTip.style.display = 'none'; }
+
+function grScala(max){
+  if(max <= 0) return { top: 100, step: 25 };
+  const grezzo = max / 4, mag = Math.pow(10, Math.floor(Math.log10(grezzo)));
+  const f = grezzo / mag;
+  const step = (f <= 1 ? 1 : f <= 2 ? 2 : f <= 2.5 ? 2.5 : f <= 5 ? 5 : 10) * mag;
+  return { top: Math.ceil(max / step) * step, step };
+}
+
+function grDisegna(host, titolo, anni, dati){
+  const card = document.createElement('div');
+  card.className = 'gr-card';
+  card.innerHTML = '<h3>' + escapeHtml(titolo) + '</h3>';
+  const tutti = anni.flatMap(a => dati[a]);
+  if(!tutti.some(v => v !== 0)){
+    card.innerHTML += '<div class="gr-vuoto">Nessun dato inserito per questo grafico.</div>';
+    host.appendChild(card); return;
+  }
+  const W = 1000, H = 360, ml = 70, mr = 14, mt = 14, mb = 34;
+  const pw = W - ml - mr, ph = H - mt - mb;
+  const sc = grScala(Math.max(...tutti));
+  const y = v => mt + ph - (Math.max(0, v) / sc.top) * ph;
+  let svg = `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${escapeHtml(titolo)}">`;
+  for(let v = 0; v <= sc.top + 0.001; v += sc.step){
+    const yy = y(v);
+    svg += `<line x1="${ml}" x2="${W - mr}" y1="${yy}" y2="${yy}" stroke="#d9d3c0" stroke-width="1"/>`;
+    svg += `<text x="${ml - 8}" y="${yy + 4}" text-anchor="end" font-size="12" fill="#5b6672" font-weight="700">${Math.round(v * 100) / 100}</text>`;
+  }
+  const gw = pw / 12, n = anni.length, bw = Math.min(26, (gw - 10) / n);
+  for(let m = 0; m < 12; m++){
+    const x0 = ml + m * gw + (gw - bw * n) / 2;
+    svg += `<text x="${ml + m * gw + gw / 2}" y="${H - 12}" text-anchor="middle" font-size="12" fill="#10202f" font-weight="800">${MESI[m].slice(0, 3).toUpperCase()}</text>`;
+    anni.forEach((a, i) => {
+      const v = dati[a][m];
+      if(v === 0) return;
+      const yy = y(v), h = Math.max(2, mt + ph - yy);
+      const tip = `${MESI[m]} ${a}  ${grEuro(v)}`;
+      svg += `<rect class="gr-bar" x="${x0 + i * bw}" y="${mt + ph - h}" width="${bw - 1.5}" height="${h}" rx="2" fill="${GR_COLORI[(a - GR_ANNO_INIZIO) % GR_COLORI.length]}" data-tip="${escapeHtml(tip)}"/>`;
+    });
+  }
+  svg += '</svg>';
+  const sc2 = document.createElement('div');
+  sc2.className = 'gr-scroll';
+  sc2.innerHTML = svg;
+  card.appendChild(sc2);
+  const tot = document.createElement('div');
+  tot.className = 'gr-tot';
+  anni.forEach(a => {
+    const t = dati[a].reduce((x, v) => x + v, 0);
+    tot.innerHTML += `<div class="gr-chip"><i style="background:${GR_COLORI[(a - GR_ANNO_INIZIO) % GR_COLORI.length]}"></i>${a} <span class="n">${grEuro(t)}</span></div>`;
+  });
+  card.appendChild(tot);
+  card.querySelectorAll('.gr-bar').forEach(r => {
+    r.addEventListener('mousemove', e => grMostraTip(e, r.dataset.tip));
+    r.addEventListener('mouseleave', grNascondiTip);
+    r.addEventListener('click', e => { grMostraTip(e, r.dataset.tip); setTimeout(grNascondiTip, 2500); });
+  });
+  host.appendChild(card);
+}
+
+async function showGrafici(){
+  nascondiPresunte();
+  riepilogoView.style.display = 'none';
+  speseFisseView.style.display = 'none';
+  selRiepilogoAnno.value = '';
+  selSpeseFisse.value = '';
+  mainContent.style.display = 'none';
+  controlliMese.style.display = 'none';
+  appEl.classList.remove('largo');
+  graficiView.style.display = 'block';
+  const corpo = document.getElementById('grafici-corpo');
+  corpo.innerHTML = '<div class="gr-vuoto">Caricamento…</div>';
+
+  // lettura (sola lettura) dei mesi, uguale a quella del Riepilogo Spese Fisse
+  const lista = [];
+  for(let a = GR_ANNO_INIZIO; a <= GR_ANNO_MAX; a++) for(let m = 1; m <= 12; m++) lista.push([a, m]);
+  const lette = await Promise.all(lista.map(async ([a, m]) => {
+    try{
+      const res = await store.get(keyFor(a, m));
+      if(res && res.value){
+        const d = JSON.parse(res.value);
+        const voci = raggruppaVociMese(d.rows);
+        const carta = voci.filter(v => v.chiave.indexOf('carta') !== -1).reduce((x, v) => x + v.somma, 0);
+        return { a, m, ok: true, provv: parseFloat(d.provvigioni) || 0, spese: calcolaSpeseDaRighe(d.rows), carta };
+      }
+    } catch(e){ /* mese senza dati */ }
+    return { a, m, ok: false, provv: 0, spese: 0, carta: 0 };
+  }));
+  let ultimo = Math.max(GR_ANNO_INIZIO + 1, new Date().getFullYear());
+  lette.forEach(r => { if(r.ok && r.a > ultimo) ultimo = r.a; });
+  const anni = [];
+  for(let a = GR_ANNO_INIZIO; a <= ultimo; a++) anni.push(a);
+  const mk = campo => { const o = {}; anni.forEach(a => o[a] = Array(12).fill(0)); lette.forEach(r => { if(o[r.a]) o[r.a][r.m - 1] = Math.round(r[campo] * 100) / 100; }); return o; };
+  corpo.innerHTML = '';
+  grDisegna(corpo, 'Provvigioni', anni, mk('provv'));
+  grDisegna(corpo, 'Spese fisse', anni, mk('spese'));
+  grDisegna(corpo, 'Carta di credito', anni, mk('carta'));
 }
 
 initLogin();

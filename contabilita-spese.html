@@ -1608,12 +1608,13 @@ function esportaSpeseFisse(){
 // =====================================================
 const PR_MIN_COLONNE = 12;
 function colonneNecessarie(){
-  const fissi = 48 + 92 + 5 * 132;
+  const fissi = 48 + 92 + 6 * 132;
   return Math.max(PR_MIN_COLONNE, Math.floor((window.innerWidth - fissi) / 86));
 }
 async function completaFoglioPresunte(doc, anno){
   let mod = false;
   if(!Array.isArray(doc.vers) || doc.vers.length !== 12){ doc.vers = Array(12).fill(null); mod = true; }
+  if(!Array.isArray(doc.corr) || doc.corr.length !== 12){ doc.corr = Array(12).fill(null); mod = true; }
   if(!Array.isArray(doc.totManuale) || doc.totManuale.length !== 12){ doc.totManuale = Array(12).fill(null); mod = true; }
   if(typeof doc.saldoIniziale !== 'number'){ doc.saldoIniziale = arrotonda2(await calcolaSaldoPrecedente(anno, 1)); mod = true; }
   if(doc.riempi !== false){
@@ -1630,7 +1631,7 @@ function arrotonda2(n){ return Math.round(n * 100) / 100; }
 async function leggiSpeseFisseAnno(anno){
   const mesi = [];
   for(let m=1; m<=12; m++){
-    let voci = [], provv = null, vers = null;
+    let voci = [], provv = null, vers = null, corr = null;
     try{
       const res = await store.get(keyFor(anno, m));
       if(res && res.value){
@@ -1640,9 +1641,11 @@ async function leggiSpeseFisseAnno(anno){
         provv = (isNaN(pv) || pv === 0) ? null : pv;
         const vv = parseFloat(d.versamento);
         vers = (isNaN(vv) || vv === 0) ? null : vv;
+        const cc = parseFloat(d.correzioni);
+        corr = (isNaN(cc) || cc === 0) ? null : cc;
       }
     } catch(e){ /* mese vuoto */ }
-    mesi.push({ voci, provv, vers });
+    mesi.push({ voci, provv, vers, corr });
   }
   const colonne = [];
   mesi.forEach(ms => ms.voci.forEach(v=>{
@@ -1652,6 +1655,7 @@ async function leggiSpeseFisseAnno(anno){
     colonne: colonne.map(c => c.etichetta),
     chiavi: colonne.map(c => c.chiave),
     vers: mesi.map(ms => ms.vers === null ? null : arrotonda2(ms.vers)),
+    corr: mesi.map(ms => ms.corr === null ? null : arrotonda2(ms.corr)),
     celle: mesi.map(ms => colonne.map(c => { const v = ms.voci.find(x => x.chiave === c.chiave); return v ? arrotonda2(v.somma) : null; })),
     provv: mesi.map(ms => ms.provv === null ? null : arrotonda2(ms.provv))
   };
@@ -1662,7 +1666,7 @@ function nuovoFoglioVuoto(saldoIniziale){
   const nCol = colonneNecessarie();
   return { sync: true, voci: Array(nCol).fill(''), link: Array(nCol).fill(null),
     celle: Array.from({length:12}, ()=> Array(nCol).fill(null)),
-    provv: Array(12).fill(null), vers: Array(12).fill(null), totManuale: Array(12).fill(null),
+    provv: Array(12).fill(null), vers: Array(12).fill(null), corr: Array(12).fill(null), totManuale: Array(12).fill(null),
     saldoIniziale, base: null };
 }
 
@@ -1671,7 +1675,8 @@ function nuovoFoglioVuoto(saldoIniziale){
 function sincronizzaDaPrincipale(doc, src, saldoSrc){
   const nn = v => (typeof v === 'number' && !isNaN(v)) ? v : null;
   const uguali = (a, b) => nn(a) === nn(b);
-  const base = doc.base || { celle:{}, provv:Array(12).fill(null), vers:Array(12).fill(null), etichette:{}, saldo:null };
+  const base = doc.base || { celle:{}, provv:Array(12).fill(null), vers:Array(12).fill(null), corr:Array(12).fill(null), etichette:{}, saldo:null };
+  if(!Array.isArray(base.corr)) base.corr = Array(12).fill(null);
   if(!Array.isArray(doc.link) || doc.link.length !== doc.voci.length) doc.link = doc.voci.map(()=> null);
   let mod = false;
   src.chiavi.forEach((k, j)=>{
@@ -1698,12 +1703,13 @@ function sincronizzaDaPrincipale(doc, src, saldoSrc){
   });
   for(let m=0; m<12; m++){
     if(uguali(doc.provv[m], base.provv[m]) && !uguali(doc.provv[m], src.provv[m])){ doc.provv[m] = src.provv[m]; mod = true; }
+    if(uguali(doc.corr[m], base.corr[m]) && !uguali(doc.corr[m], src.corr[m])){ doc.corr[m] = src.corr[m]; mod = true; }
     if(uguali(doc.vers[m], base.vers[m]) && !uguali(doc.vers[m], src.vers[m])){ doc.vers[m] = src.vers[m]; mod = true; }
   }
   if(doc.base === null || doc.base === undefined || uguali(doc.saldoIniziale, base.saldo)){
     if(!uguali(doc.saldoIniziale, saldoSrc)){ doc.saldoIniziale = saldoSrc; mod = true; }
   }
-  const nb = { celle:{}, provv:src.provv.slice(), vers:src.vers.slice(), etichette:{}, saldo:saldoSrc };
+  const nb = { celle:{}, provv:src.provv.slice(), vers:src.vers.slice(), corr:src.corr.slice(), etichette:{}, saldo:saldoSrc };
   src.chiavi.forEach((k, j)=>{ nb.celle[k] = src.celle.map(r => r[j]); nb.etichette[k] = src.colonne[j]; });
   if(JSON.stringify(nb) !== JSON.stringify(doc.base)){ mod = true; }
   doc.base = nb;
@@ -1758,6 +1764,7 @@ function disegnaPresunte(){
   d.voci.forEach((v, c)=>{
     h += `<th><div class="pr-vwrap"><div class="pr-grip" draggable="true" data-c="${c}" title="Trascina per spostare la colonna">⠿</div><textarea class="pr-voce" data-c="${c}" rows="4" maxlength="80" placeholder="Voce">${escapeHtml(v)}</textarea><button type="button" class="pr-del" data-c="${c}" title="Elimina questa colonna">×</button><div class="pr-frecce"><button type="button" class="pr-mv" data-c="${c}" data-dir="-1" title="Sposta a sinistra"${c === 0 ? ' disabled' : ''}>◀</button><button type="button" class="pr-mv" data-c="${c}" data-dir="1" title="Sposta a destra"${c === d.voci.length - 1 ? ' disabled' : ''}>▶</button></div></div></th>`;
   });
+  h += '<th class="sf-extra"><div class="sf-voce">Correzione C/C</div></th>';
   h += '<th class="sf-extra"><div class="sf-voce">Versamento su C/C</div></th>';
   h += '<th class="sf-extra sf-saldo"><div class="sf-voce">Saldo Primo del Mese su C/C</div></th>';
   h += '<th class="sf-extra sf-saldo"><div class="sf-voce">Saldo Ultimo del Mese C/C</div></th>';
@@ -1771,6 +1778,7 @@ function disegnaPresunte(){
     for(let c=0; c<d.voci.length; c++){
       b += `<td><input type="text" inputmode="decimal" class="pr-cell" data-m="${m}" data-c="${c}" placeholder="—" autocomplete="off" value="${escapeHtml(celleTesto(d.celle[m][c]))}"></td>`;
     }
+    b += `<td class="sf-extra"><input type="text" inputmode="decimal" class="pr-cell" data-m="${m}" data-k="1" placeholder="—" autocomplete="off" value="${escapeHtml(celleTesto(d.corr[m]))}"></td>`;
     b += `<td class="sf-extra"><input type="text" inputmode="decimal" class="pr-cell" data-m="${m}" data-v="1" placeholder="—" autocomplete="off" value="${escapeHtml(celleTesto(d.vers[m]))}"></td>`;
     b += `<td class="sf-extra"><div class="pr-calc saldo" id="pr-sp-${m}">—</div></td>`;
     b += `<td class="sf-extra"><div class="pr-calc saldo" id="pr-su-${m}">—</div></td>`;
@@ -1779,7 +1787,7 @@ function disegnaPresunte(){
   }
   b += '<tr class="sf-riga-totale"><td class="sf-mese">TOTALE ANNO</td>';
   for(let c=0; c<d.voci.length; c++){ b += `<td><div class="pr-sum vuoto" id="pr-sum-${c}">—</div></td>`; }
-  b += '<td class="sf-extra"><div class="sf-grande" id="pr-vers-anno">€ 0,00</div></td><td class="sf-extra"></td><td class="sf-extra"></td>';
+  b += '<td class="sf-extra"></td><td class="sf-extra"><div class="sf-grande" id="pr-vers-anno">€ 0,00</div></td><td class="sf-extra"></td><td class="sf-extra"></td>';
   b += '<td class="sf-totale"><div class="sf-grande" id="pr-tot-anno">€ 0,00</div></td>';
   b += '<td class="sf-provv"><div class="sf-grande" id="pr-prov-anno">€ 0,00</div></td></tr>';
   presunteBody.innerHTML = b;
@@ -1818,8 +1826,8 @@ function aggiornaTotaliPresunte(){
         if(document.activeElement !== el){ el.value = (typeof d.totManuale[m] === 'number') ? formatEuro(d.totManuale[m]) : ''; }
       }
     }
-    const pv = num(d.provv[m]), vs = num(d.vers[m]);
-    const primo = carry + pv + vs;
+    const pv = num(d.provv[m]), vs = num(d.vers[m]), cr = num(d.corr[m]);
+    const primo = carry + cr + pv + vs;
     const ultimo = primo - spese;
     mostra('pr-sp-' + m, primo);
     mostra('pr-su-' + m, ultimo);
@@ -1869,6 +1877,7 @@ presunteBody.addEventListener('input', (e)=>{
   const m = parseInt(t.dataset.m);
   const v = valoreCella(t.value);
   if(t.dataset.p){ presunteDati.provv[m] = v; }
+  else if(t.dataset.k){ presunteDati.corr[m] = v; }
   else if(t.dataset.v){ presunteDati.vers[m] = v; }
   else if(t.dataset.t){ presunteDati.totManuale[m] = v; }
   else { presunteDati.celle[m][parseInt(t.dataset.c)] = v; }
@@ -1895,6 +1904,7 @@ presunteBody.addEventListener('keydown', (e)=>{
   const m = parseInt(t.dataset.m) + dm;
   if(m < 0 || m > 11) return;
   const sel = t.dataset.p ? `input.pr-cell[data-m="${m}"][data-p="1"]`
+    : t.dataset.k ? `input.pr-cell[data-m="${m}"][data-k="1"]`
     : t.dataset.v ? `input.pr-cell[data-m="${m}"][data-v="1"]`
     : t.dataset.t ? `input.pr-cell[data-m="${m}"][data-t="1"]`
     : `input.pr-cell[data-m="${m}"][data-c="${t.dataset.c}"]`;
@@ -2005,7 +2015,7 @@ async function eliminaColonnePresunte(modo, indice){
   let nomi = daEliminare.slice(0, 6).map(c => '<b>' + escapeHtml((d.voci[c] || '').trim() || ('colonna ' + (c + 1) + ' (vuota)')) + '</b>').join(', ');
   if(daEliminare.length > 6){ nomi += ` e altre ${daEliminare.length - 6}`; }
   document.getElementById('conferma-nomi').innerHTML = nomi + (conDati ? `<br><br>Attenzione: ${conDati === 1 ? 'una colonna contiene' : conDati + ' colonne contengono'} nomi o importi, che andranno persi.` : '');
-  document.getElementById('conferma-t2').textContent = 'Restano sempre Versamento, Saldo Primo, Saldo Ultimo, Totale spese e Provvigioni. Le altre schede non vengono modificate.';
+  document.getElementById('conferma-t2').textContent = 'Restano sempre Correzione, Versamento, Saldo Primo, Saldo Ultimo, Totale spese e Provvigioni. Le altre schede non vengono modificate.';
   const ok = await chiediConferma();
   if(!ok) return;
   const set = new Set(daEliminare);
@@ -2050,20 +2060,20 @@ function esportaPresunte(){
   if(!d){ return; }
   const num = v => (typeof v === 'number' && !isNaN(v)) ? v : null;
   const intest = ['Mese', ...d.voci.map((v, i)=> v.trim() || ('Colonna ' + (i + 1))),
-    'Versamento su C/C', 'Saldo Primo del Mese su C/C', 'Saldo Ultimo del Mese C/C', 'Totale spese del mese', 'Provvigioni'];
+    'Correzione C/C', 'Versamento su C/C', 'Saldo Primo del Mese su C/C', 'Saldo Ultimo del Mese C/C', 'Totale spese del mese', 'Provvigioni'];
   const righe = [intest];
   let totAnno = 0, provAnno = 0, versAnno = 0, carry = num(d.saldoIniziale) || 0;
   for(let m=0; m<12; m++){
     let somma = 0, conValori = false;
     d.celle[m].forEach(v => { if(typeof v === 'number'){ somma += v; conValori = true; } });
     const spese = conValori ? somma : (num(d.totManuale[m]) || 0);
-    const pv = num(d.provv[m]), vs = num(d.vers[m]);
-    const primo = carry + (pv || 0) + (vs || 0), ultimo = primo - spese;
+    const pv = num(d.provv[m]), vs = num(d.vers[m]), cr = num(d.corr[m]);
+    const primo = carry + (cr || 0) + (pv || 0) + (vs || 0), ultimo = primo - spese;
     carry = ultimo;
     totAnno += spese; provAnno += (pv || 0); versAnno += (vs || 0);
-    righe.push([MESI[m], ...d.celle[m].map(v => num(v)), vs, arrotonda2(primo), arrotonda2(ultimo), (conValori || num(d.totManuale[m]) !== null) ? arrotonda2(spese) : null, pv]);
+    righe.push([MESI[m], ...d.celle[m].map(v => num(v)), cr, vs, arrotonda2(primo), arrotonda2(ultimo), (conValori || num(d.totManuale[m]) !== null) ? arrotonda2(spese) : null, pv]);
   }
-  righe.push(['TOTALE ANNO', ...d.voci.map((v, col)=>{ let t = 0, ok = false; d.celle.forEach(r => { if(typeof r[col] === 'number'){ t += r[col]; ok = true; } }); return ok ? arrotonda2(t) : null; }), arrotonda2(versAnno), null, null, arrotonda2(totAnno), arrotonda2(provAnno)]);
+  righe.push(['TOTALE ANNO', ...d.voci.map((v, col)=>{ let t = 0, ok = false; d.celle.forEach(r => { if(typeof r[col] === 'number'){ t += r[col]; ok = true; } }); return ok ? arrotonda2(t) : null; }), null, arrotonda2(versAnno), null, null, arrotonda2(totAnno), arrotonda2(provAnno)]);
   scaricaTabella(`Spese_stimate_future_${presunteAnno}`, intest, righe);
 }
 

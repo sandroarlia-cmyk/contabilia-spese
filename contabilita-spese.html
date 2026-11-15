@@ -455,6 +455,35 @@
   #presunte-view th.c-vers .sf-voce{ background:var(--c-vers) !important; }
   #presunte-view table.ledger td input.pr-cell[data-v], #presunte-view table.ledger td input.pr-cell[data-v]:focus{ background:var(--c-vers) !important; }
   #presunte-view #pr-vers-anno.sf-grande{ background:var(--c-vers) !important; }
+
+  /* ===== Riquadri in alto: etichetta DENTRO il riquadro, maiuscolo grassetto ===== */
+  .row-mese .ctrl-box{
+    height:var(--card-h2); background:var(--paper); border:1px solid var(--border); border-radius:10px;
+    padding:8px; gap:8px; align-items:center; justify-content:center; box-sizing:border-box;
+  }
+  .row-mese .ctrl-box label{
+    font-size:12px; font-weight:800; letter-spacing:0.6px; text-transform:uppercase; color:var(--ink-soft);
+    width:100%; justify-content:center; white-space:normal !important; text-align:center; flex-wrap:wrap; overflow:visible !important;
+  }
+  .row-mese .ctrl-box select, .row-mese .ctrl-box input{
+    width:92%; height:48px; box-sizing:border-box; background:#fff; border:1px solid var(--border); border-radius:6px;
+    font-size:18px; font-weight:700; padding:4px;
+  }
+  .row-mese .ctrl-box.c-corr{ background:var(--c-corr); border-color:#c4b4ea; }
+  .row-mese .ctrl-box.c-corr input{ background:#fff !important; }
+  .row-mese .ctrl-box.box-prec{ background:var(--green-deep); border-color:var(--green-deep); }
+  .row-mese .ctrl-box.box-prec label, .row-mese .ctrl-box.box-prec .refresh-btn{ color:#fff; }
+  .row-mese .ctrl-box.box-prec #val-saldo-precedente{ background:transparent; border:none; width:100%; height:48px; }
+  .summary-box label{ font-weight:800; }
+  /* Spese stimate future / Riepilogo Spese Fisse: titolo maiuscolo grassetto, a capo se serve */
+  .row-viste .ctrl-box{ position:relative; }
+  .sf-ovl{
+    position:absolute; left:0; right:0; bottom:0; height:var(--card-h1); display:flex; align-items:center; justify-content:center;
+    text-align:center; padding:6px 22px; box-sizing:border-box; pointer-events:none; z-index:2;
+    font-size:14px; font-weight:800; text-transform:uppercase; line-height:1.25; color:var(--green-deep); white-space:pre-line;
+  }
+  .ctrl-box select.sf-box-select{ color:transparent; text-shadow:none; }
+  .ctrl-box select.sf-box-select option{ color:#111; font-weight:700; }
 </style>
 </head>
 <body>
@@ -500,12 +529,14 @@
   <div class="row-controls row-viste">
     <div class="ctrl-box ctrl-presunte">
       <label>&nbsp;</label>
+      <div class="sf-ovl" data-for="sel-presunte" data-t="Spese stimate future"></div>
       <select id="sel-presunte" class="sf-box-select">
         <option value="">Spese stimate future</option>
       </select>
     </div>
     <div class="ctrl-box ctrl-fisse">
       <label>&nbsp;</label>
+      <div class="sf-ovl" data-for="sel-spese-fisse" data-t="Riepilogo Spese Fisse"></div>
       <select id="sel-spese-fisse" class="sf-box-select">
         <option value="">Riepilogo Spese Fisse</option>
       </select>
@@ -526,7 +557,7 @@
         <label>Correzioni C/C</label>
         <input type="text" inputmode="decimal" id="in-correzioni" placeholder="€ 0,00">
       </div>
-      <div class="ctrl-box">
+      <div class="ctrl-box box-prec">
         <label>Saldo Mese Precedente <button type="button" id="btn-refresh-saldo" class="refresh-btn" title="Ricalcola">⟳</button></label>
         <div class="value" id="val-saldo-precedente">€ 0,00</div>
       </div>
@@ -2257,6 +2288,15 @@ async function showRiepilogo(anno){
 }
 
 initLogin();
+
+// Titoli dei due menu in alto: maiuscolo, grassetto, a capo; mostrano anche l'anno scelto
+setInterval(()=>{
+  document.querySelectorAll('.sf-ovl').forEach(o=>{
+    const sel = document.getElementById(o.dataset.for);
+    const t = o.dataset.t + (sel && sel.value ? '\n' + sel.value : '');
+    if(o.textContent !== t) o.textContent = t;
+  });
+}, 250);
 </script>
 </body>
 </html>

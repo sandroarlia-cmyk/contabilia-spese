@@ -564,6 +564,24 @@
   #app .row-summary .summary-box.negativo{ background:linear-gradient(180deg,#b1ac91 0%,#fefae5 22%,#fdf6cf 50%,#dfd8b6 80%,#9d9980 100%) !important; border:1px solid #7e7b68 !important; box-shadow:3px 4px 5px rgba(0,0,0,.38) !important; }
   #app .row-summary .summary-box input.value-input, #app .row-summary .summary-box .value, #app .row-summary .summary-box.negativo .value, #app .row-mese .ctrl-box select, #app .row-mese .ctrl-box input{ box-shadow:inset 0 2px 5px rgba(0,0,0,.35), 0 1px 0 rgba(255,255,255,.5) !important; }
   #app .row-mese .ctrl-box.box-prec #val-saldo-precedente{ box-shadow:none !important; }
+
+  /* Solo smartphone: Riepilogo Spese Fisse a destra, Sintesi contabile mensile sotto di lui */
+  @media (max-width:700px){
+    .top-boxes{ display:grid; grid-template-columns:repeat(2,1fr); gap:12px; margin-bottom:16px; }
+    .top-boxes > .row-controls{ display:contents; }
+    #app .top-boxes .ctrl-grafici{ grid-column:1; grid-row:1; }
+    #app .top-boxes .ctrl-presunte{ grid-column:1; grid-row:2; }
+    #app .top-boxes .ctrl-fisse{ grid-column:2; grid-row:1; }
+    #app .top-boxes .ctrl-riepilogo{ grid-column:2; grid-row:2; }
+  }
+  @media (max-width:700px){ #app .ctrl-riepilogo select{ font-size:14px !important; padding:4px 2px !important; } }
+  /* Smartphone: i tre pulsanti in alto alti come Sintesi contabile mensile */
+  @media (max-width:700px){
+    #app .top-boxes .ctrl-grafici, #app .top-boxes .ctrl-presunte, #app .top-boxes .ctrl-fisse{ height:var(--card-h2); }
+    #app .top-boxes .ctrl-grafici label, #app .top-boxes .ctrl-presunte label, #app .top-boxes .ctrl-fisse label{ display:none; }
+    #app .top-boxes .sf-grafici-btn, #app .top-boxes select.sf-box-select{ height:100% !important; }
+    #app .top-boxes .sf-ovl{ height:100%; top:0; padding:6px 14px; }
+  }
 </style>
 </head>
 <body>
@@ -606,6 +624,7 @@
     <button type="button" id="btn-ricalcola-anno" class="ricalcola-btn">↻ Ricalcola tutto l'anno</button>
   </div>
 
+  <div class="top-boxes">
   <div class="row-controls row-viste">
     <div class="ctrl-box ctrl-grafici">
       <label>&nbsp;</label>
@@ -652,6 +671,7 @@
         <option value="">— seleziona —</option>
       </select>
     </div>
+  </div>
   </div>
 
   <div id="main-content">

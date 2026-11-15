@@ -437,8 +437,8 @@
   #box-banca{ background:var(--c-primo) !important; border-color:#9cc3e6 !important; }
   #box-differenza:not(.negativo){ background:var(--c-ultimo) !important; border-color:#e6b387 !important; }
   /* Riepilogo Anno */
-  #riepilogo-view table.ledger th.c-primo{ background:#9cc3e6 !important; color:#000 !important; }
-  #riepilogo-view table.ledger th.c-ultimo{ background:#e6b387 !important; color:#000 !important; }
+  #riepilogo-view table.ledger th.c-primo{ background-color:#9cc3e6 !important; color:#000 !important; }
+  #riepilogo-view table.ledger th.c-ultimo{ background-color:#e6b387 !important; color:#000 !important; }
   table.ledger td.riepilogo-saldo-primo .riepilogo-valore{ background:var(--c-primo) !important; }
   table.ledger td.riepilogo-saldo-ultimo .riepilogo-valore:not(.negativo){ background:var(--c-ultimo) !important; }
   /* Spese stimate future */
@@ -450,7 +450,7 @@
   #presunte-view .pr-calc[id^="pr-su-"]:not(.neg){ background:var(--c-ultimo) !important; }
   .summary-box.c-vers{ background:var(--c-vers) !important; border-color:#7fcfc2 !important; }
   .summary-box.c-vers input.value-input{ background:#fff; }
-  #riepilogo-view table.ledger th.c-vers{ background:#7fcfc2 !important; color:#000 !important; }
+  #riepilogo-view table.ledger th.c-vers{ background-color:#7fcfc2 !important; color:#000 !important; }
   table.ledger td.riepilogo-vers .riepilogo-valore{ background:var(--c-vers) !important; }
   #presunte-view th.c-vers .sf-voce{ background:var(--c-vers) !important; }
   #presunte-view table.ledger td input.pr-cell[data-v], #presunte-view table.ledger td input.pr-cell[data-v]:focus{ background:var(--c-vers) !important; }
@@ -487,8 +487,8 @@
 
   /* Riepilogo Anno: intestazioni +4pt, maiuscolo, grassetto, centrate; valori centrati */
   #riepilogo-view table.ledger thead th{ font-size:15px; font-weight:800; text-transform:uppercase; text-align:center; letter-spacing:0.3px; }
-  #riepilogo-view table.ledger th.c-spese{ background:#f9dcd9 !important; color:#000 !important; }
-  #riepilogo-view table.ledger th.c-prov{ background:#d3ecd6 !important; color:#000 !important; }
+  #riepilogo-view table.ledger th.c-spese{ background-color:#f9dcd9 !important; color:#000 !important; }
+  #riepilogo-view table.ledger th.c-prov{ background-color:#d3ecd6 !important; color:#000 !important; }
   #riepilogo-view table.ledger .riepilogo-valore{ text-align:center; }
   table.ledger td.riepilogo-prov .riepilogo-valore{ background:#d3ecd6 !important; }
 
@@ -511,6 +511,13 @@
   .row-summary .summary-box input#in-provvigioni{ color:#0b5a2a !important; font-weight:800; }
   .row-summary .summary-box input#in-provvigioni::placeholder{ color:#0b5a2a; opacity:.45; }
   .row-mese .ctrl-box label{ min-height:30px; align-content:center; }
+  /* Provvigioni: fondino verde chiaro attorno al riquadro bianco */
+  .row-summary .summary-box.box-provv{ background:#d3ecd6 !important; border-color:#9ccca1 !important; }
+  /* Sintesi contabile mensile: separatore bianco tra le intestazioni, allineato alle colonne sotto */
+  #riepilogo-view table.ledger thead tr, #riepilogo-view table.ledger thead{ background:#fff; }
+  #riepilogo-view table.ledger tbody tr, #riepilogo-view table.ledger tbody tr:nth-child(even){ background:#fff; }
+  #riepilogo-view table.ledger thead th{ background-clip:content-box !important; padding:0 6px !important; height:44px; vertical-align:middle; }
+  #riepilogo-view table.ledger thead th:first-child{ background-clip:border-box !important; padding:0 8px !important; }
 </style>
 </head>
 <body>
@@ -603,7 +610,7 @@
       <label>Spese</label>
       <div class="value" id="val-spese">0,00</div>
     </div>
-    <div class="summary-box">
+    <div class="summary-box box-provv">
       <label>Provvigioni</label>
       <input type="text" inputmode="decimal" id="in-provvigioni" class="value-input" placeholder="€ 0,00">
     </div>

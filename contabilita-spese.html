@@ -2376,7 +2376,7 @@ async function showRiepilogo(anno){
 //  GRAFICI (solo lettura, dal 2025 in poi, dati dalla scheda principale)
 // =====================================================
 const GR_ANNO_INIZIO = 2025, GR_ANNO_MAX = 2035;
-const GR_COLORI = ['#8fd400','#0b3fc7','#d81b60','#00acd6','#ff7a1a','#0a9a4b','#00bfa5','#039be5','#f57c00','#8d5a2b','#546e7a'];
+const GR_COLORI = ['#86e000','#0a2fd6','#e6007e','#00b4e6','#ff7a00','#00a850','#00cdb0','#0094f0','#f06a00','#9a5a1e','#4f6b7a'];
 function grEuro(n){
   const neg = n < 0; n = Math.abs(n);
   let t = (Math.round(n * 100) / 100).toFixed(2).replace('.', ',');
@@ -2420,10 +2420,10 @@ function grDisegna(host, titolo, anni, dati){
   const sc = grScala(Math.max(...tutti));
   const y = v => mt + ph - (Math.max(0, v) / sc.top) * ph;
   const uid = 'g' + Math.random().toString(36).slice(2, 8);
-  let svg = `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${escapeHtml(titolo)}"><defs><filter id="${uid}o" x="-30%" y="-10%" width="170%" height="130%"><feDropShadow dx="3" dy="3" stdDeviation="2.5" flood-color="#000" flood-opacity=".38"/></filter>`;
+  let svg = `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${escapeHtml(titolo)}"><defs><filter id="${uid}o" x="-30%" y="-10%" width="170%" height="130%"><feDropShadow dx="2" dy="2.5" stdDeviation="1.4" flood-color="#000" flood-opacity=".32"/></filter>`;
   anni.forEach(a => {
     const c = GR_COLORI[(a - GR_ANNO_INIZIO) % GR_COLORI.length];
-    svg += `<linearGradient id="${uid}${a}" x1="0" x2="1" y1="0" y2="0"><stop offset="0" stop-color="${grSfuma(c, -.28)}"/><stop offset=".35" stop-color="${grSfuma(c, .35)}"/><stop offset="1" stop-color="${grSfuma(c, -.3)}"/></linearGradient>`;
+    svg += `<linearGradient id="${uid}${a}" x1="0" x2="1" y1="0" y2="0"><stop offset="0" stop-color="${grSfuma(c, -.2)}"/><stop offset=".3" stop-color="${grSfuma(c, .12)}"/><stop offset=".5" stop-color="${c}"/><stop offset="1" stop-color="${grSfuma(c, -.38)}"/></linearGradient>`;
   });
   svg += '</defs>';
   for(let v = 0; v <= sc.top + 0.001; v += sc.step){
@@ -2442,7 +2442,7 @@ function grDisegna(host, titolo, anni, dati){
       const tip = `${MESI[m]} ${a}  ${grEuro(v)}`;
       const col = GR_COLORI[(a - GR_ANNO_INIZIO) % GR_COLORI.length];
       const bx = x0 + i * bw, bww = bw - 1.5, by = mt + ph - h, base = mt + ph, ry = Math.min(3.5, bww / 4);
-      svg += `<g class="gr-bar" data-tip="${escapeHtml(tip)}" filter="url(#${uid}o)"><rect x="${bx}" y="${by}" width="${bww}" height="${h}" fill="url(#${uid}${a})"/><ellipse cx="${bx + bww / 2}" cy="${base}" rx="${bww / 2}" ry="${ry}" fill="${grSfuma(col, -.3)}"/><ellipse cx="${bx + bww / 2}" cy="${by}" rx="${bww / 2}" ry="${ry}" fill="${grSfuma(col, .45)}"/></g>`;
+      svg += `<g class="gr-bar" data-tip="${escapeHtml(tip)}" filter="url(#${uid}o)"><rect x="${bx}" y="${by}" width="${bww}" height="${h}" fill="url(#${uid}${a})" stroke="${grSfuma(col, -.5)}" stroke-width=".9"/><ellipse cx="${bx + bww / 2}" cy="${base}" rx="${bww / 2}" ry="${ry}" fill="${grSfuma(col, -.4)}" stroke="${grSfuma(col, -.55)}" stroke-width=".9"/><ellipse cx="${bx + bww / 2}" cy="${by}" rx="${bww / 2}" ry="${ry}" fill="${grSfuma(col, .3)}" stroke="${grSfuma(col, -.45)}" stroke-width=".9"/></g>`;
     });
   }
   svg += '</svg>';

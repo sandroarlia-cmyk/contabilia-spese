@@ -540,7 +540,7 @@
     padding:8px 12px; font-size:14px; font-weight:700; box-shadow:0 6px 18px rgba(0,0,0,.35); white-space:nowrap;
   }
   .gr-bar{ cursor:pointer; }
-  .gr-bar:hover{ filter:brightness(1.12); stroke:#10202f; stroke-width:1.5; }
+  .gr-bar:hover{ opacity:.88; }
   .gr-edit{ border:2px dashed var(--gold); }
   .gr-edit summary{ cursor:pointer; font-weight:800; color:var(--green-deep); font-size:15px; text-transform:uppercase; }
   .gr-ed{ border-collapse:separate; border-spacing:4px; min-width:900px; }
@@ -2376,12 +2376,17 @@ async function showRiepilogo(anno){
 //  GRAFICI (solo lettura, dal 2025 in poi, dati dalla scheda principale)
 // =====================================================
 const GR_ANNO_INIZIO = 2025, GR_ANNO_MAX = 2035;
-const GR_COLORI = ['#2f7fc1','#e8833a','#2f9e6b','#c0509a','#8a63d2','#d9a441','#2aa5b3','#d1495b','#6b8e23','#555f9e','#b5651d'];
+const GR_COLORI = ['#8fd400','#0b3fc7','#d81b60','#00acd6','#ff7a1a','#0a9a4b','#00bfa5','#039be5','#f57c00','#8d5a2b','#546e7a'];
 function grEuro(n){
   const neg = n < 0; n = Math.abs(n);
   let t = (Math.round(n * 100) / 100).toFixed(2).replace('.', ',');
   if(n >= 10000){ t = t.replace(/\B(?=(\d{3})+(?!\d))/g, '.'); }
   return (neg ? '-' : '') + '€ ' + t;
+}
+function grSfuma(c, f){
+  const n = parseInt(c.slice(1), 16); let r = n >> 16, g = (n >> 8) & 255, b = n & 255;
+  const m = f < 0 ? 0 : 255, t = Math.abs(f);
+  return `rgb(${Math.round((m - r) * t + r)},${Math.round((m - g) * t + g)},${Math.round((m - b) * t + b)})`;
 }
 let grTip = null;
 function grMostraTip(e, testo){
@@ -2414,7 +2419,13 @@ function grDisegna(host, titolo, anni, dati){
   const pw = W - ml - mr, ph = H - mt - mb;
   const sc = grScala(Math.max(...tutti));
   const y = v => mt + ph - (Math.max(0, v) / sc.top) * ph;
-  let svg = `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${escapeHtml(titolo)}">`;
+  const uid = 'g' + Math.random().toString(36).slice(2, 8);
+  let svg = `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${escapeHtml(titolo)}"><defs><filter id="${uid}o" x="-30%" y="-10%" width="170%" height="130%"><feDropShadow dx="3" dy="3" stdDeviation="2.5" flood-color="#000" flood-opacity=".38"/></filter>`;
+  anni.forEach(a => {
+    const c = GR_COLORI[(a - GR_ANNO_INIZIO) % GR_COLORI.length];
+    svg += `<linearGradient id="${uid}${a}" x1="0" x2="1" y1="0" y2="0"><stop offset="0" stop-color="${grSfuma(c, -.28)}"/><stop offset=".35" stop-color="${grSfuma(c, .35)}"/><stop offset="1" stop-color="${grSfuma(c, -.3)}"/></linearGradient>`;
+  });
+  svg += '</defs>';
   for(let v = 0; v <= sc.top + 0.001; v += sc.step){
     const yy = y(v);
     svg += `<line x1="${ml}" x2="${W - mr}" y1="${yy}" y2="${yy}" stroke="#d9d3c0" stroke-width="1"/>`;
@@ -2429,7 +2440,9 @@ function grDisegna(host, titolo, anni, dati){
       if(v === 0) return;
       const yy = y(v), h = Math.max(2, mt + ph - yy);
       const tip = `${MESI[m]} ${a}  ${grEuro(v)}`;
-      svg += `<rect class="gr-bar" x="${x0 + i * bw}" y="${mt + ph - h}" width="${bw - 1.5}" height="${h}" rx="2" fill="${GR_COLORI[(a - GR_ANNO_INIZIO) % GR_COLORI.length]}" data-tip="${escapeHtml(tip)}"/>`;
+      const col = GR_COLORI[(a - GR_ANNO_INIZIO) % GR_COLORI.length];
+      const bx = x0 + i * bw, bww = bw - 1.5, by = mt + ph - h, base = mt + ph, ry = Math.min(3.5, bww / 4);
+      svg += `<g class="gr-bar" data-tip="${escapeHtml(tip)}" filter="url(#${uid}o)"><rect x="${bx}" y="${by}" width="${bww}" height="${h}" fill="url(#${uid}${a})"/><ellipse cx="${bx + bww / 2}" cy="${base}" rx="${bww / 2}" ry="${ry}" fill="${grSfuma(col, -.3)}"/><ellipse cx="${bx + bww / 2}" cy="${by}" rx="${bww / 2}" ry="${ry}" fill="${grSfuma(col, .45)}"/></g>`;
     });
   }
   svg += '</svg>';

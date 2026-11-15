@@ -429,6 +429,32 @@
     table.ledger.spese-fisse-table th.sf-mese, table.ledger.spese-fisse-table td.sf-mese{ width:84px; min-width:84px; max-width:84px; font-size:12px; }
     .riepilogo-header{ flex-direction:column; align-items:flex-start; gap:10px; }
   }
+
+  /* ===== Colori fissi delle voci, uguali in tutte le schede ===== */
+  :root{ --c-vers:#bdeee6; --c-corr:#e4daf6; --c-primo:#d3e8fa; --c-ultimo:#fbd9bd; }
+  /* scheda Contabilità Spese */
+  .ctrl-box.c-corr input{ background:var(--c-corr) !important; }
+  #box-banca{ background:var(--c-primo) !important; border-color:#9cc3e6 !important; }
+  #box-differenza:not(.negativo){ background:var(--c-ultimo) !important; border-color:#e6b387 !important; }
+  /* Riepilogo Anno */
+  #riepilogo-view table.ledger th.c-primo{ background:#9cc3e6 !important; color:#000 !important; }
+  #riepilogo-view table.ledger th.c-ultimo{ background:#e6b387 !important; color:#000 !important; }
+  table.ledger td.riepilogo-saldo-primo .riepilogo-valore{ background:var(--c-primo) !important; }
+  table.ledger td.riepilogo-saldo-ultimo .riepilogo-valore:not(.negativo){ background:var(--c-ultimo) !important; }
+  /* Spese stimate future */
+  #presunte-view th.c-corr .sf-voce{ background:var(--c-corr) !important; }
+  #presunte-view th.c-primo .sf-voce{ background:var(--c-primo) !important; }
+  #presunte-view th.c-ultimo .sf-voce{ background:var(--c-ultimo) !important; }
+  #presunte-view table.ledger td input.pr-cell[data-k], #presunte-view table.ledger td input.pr-cell[data-k]:focus{ background:var(--c-corr) !important; }
+  #presunte-view .pr-calc[id^="pr-sp-"]:not(.neg){ background:var(--c-primo) !important; }
+  #presunte-view .pr-calc[id^="pr-su-"]:not(.neg){ background:var(--c-ultimo) !important; }
+  .summary-box.c-vers{ background:var(--c-vers) !important; border-color:#7fcfc2 !important; }
+  .summary-box.c-vers input.value-input{ background:#fff; }
+  #riepilogo-view table.ledger th.c-vers{ background:#7fcfc2 !important; color:#000 !important; }
+  table.ledger td.riepilogo-vers .riepilogo-valore{ background:var(--c-vers) !important; }
+  #presunte-view th.c-vers .sf-voce{ background:var(--c-vers) !important; }
+  #presunte-view table.ledger td input.pr-cell[data-v], #presunte-view table.ledger td input.pr-cell[data-v]:focus{ background:var(--c-vers) !important; }
+  #presunte-view #pr-vers-anno.sf-grande{ background:var(--c-vers) !important; }
 </style>
 </head>
 <body>
@@ -496,7 +522,7 @@
         <label>Mese</label>
         <select id="sel-mese"></select>
       </div>
-      <div class="ctrl-box">
+      <div class="ctrl-box c-corr">
         <label>Correzioni C/C</label>
         <input type="text" inputmode="decimal" id="in-correzioni" placeholder="€ 0,00">
       </div>
@@ -523,7 +549,7 @@
       <label>Provvigioni</label>
       <input type="text" inputmode="decimal" id="in-provvigioni" class="value-input" placeholder="€ 0,00">
     </div>
-    <div class="summary-box">
+    <div class="summary-box c-vers">
       <label>Versamento su C/C</label>
       <input type="text" inputmode="decimal" id="in-versamento" class="value-input" placeholder="€ 0,00">
     </div>
@@ -571,9 +597,9 @@
         <thead>
           <tr>
             <th>Mese</th>
-            <th>Saldo Primo del Mese su C/C</th>
-            <th>Saldo Ultimo del Mese C/C</th>
-            <th>Versamento su C/C</th>
+            <th class="c-primo">Saldo Primo del Mese su C/C</th>
+            <th class="c-ultimo">Saldo Ultimo del Mese C/C</th>
+            <th class="c-vers">Versamento su C/C</th>
             <th>Spese</th>
             <th>Provvigioni</th>
           </tr>
@@ -1764,10 +1790,10 @@ function disegnaPresunte(){
   d.voci.forEach((v, c)=>{
     h += `<th><div class="pr-vwrap"><div class="pr-grip" draggable="true" data-c="${c}" title="Trascina per spostare la colonna">⠿</div><textarea class="pr-voce" data-c="${c}" rows="4" maxlength="80" placeholder="Voce">${escapeHtml(v)}</textarea><button type="button" class="pr-del" data-c="${c}" title="Elimina questa colonna">×</button><div class="pr-frecce"><button type="button" class="pr-mv" data-c="${c}" data-dir="-1" title="Sposta a sinistra"${c === 0 ? ' disabled' : ''}>◀</button><button type="button" class="pr-mv" data-c="${c}" data-dir="1" title="Sposta a destra"${c === d.voci.length - 1 ? ' disabled' : ''}>▶</button></div></div></th>`;
   });
-  h += '<th class="sf-extra"><div class="sf-voce">Correzione C/C</div></th>';
-  h += '<th class="sf-extra"><div class="sf-voce">Versamento su C/C</div></th>';
-  h += '<th class="sf-extra sf-saldo"><div class="sf-voce">Saldo Primo del Mese su C/C</div></th>';
-  h += '<th class="sf-extra sf-saldo"><div class="sf-voce">Saldo Ultimo del Mese C/C</div></th>';
+  h += '<th class="sf-extra c-corr"><div class="sf-voce">Correzione C/C</div></th>';
+  h += '<th class="sf-extra c-vers"><div class="sf-voce">Versamento su C/C</div></th>';
+  h += '<th class="sf-extra sf-saldo c-primo"><div class="sf-voce">Saldo Primo del Mese su C/C</div></th>';
+  h += '<th class="sf-extra sf-saldo c-ultimo"><div class="sf-voce">Saldo Ultimo del Mese C/C</div></th>';
   h += '<th class="sf-totale"><div class="sf-voce sf-voce-tot">Totale spese del mese</div></th>';
   h += '<th class="sf-provv"><div class="sf-voce">Provvigioni</div></th></tr>';
   presunteHead.innerHTML = h;
@@ -2188,7 +2214,7 @@ async function showRiepilogo(anno){
         <td class="riepilogo-mese-cell">${nomeMese}</td>
         <td class="riepilogo-saldo-primo"><span class="riepilogo-valore vuoto">—</span></td>
         <td class="riepilogo-saldo-ultimo"><span class="riepilogo-valore vuoto">—</span></td>
-        <td><span class="riepilogo-valore vuoto">—</span></td>
+        <td class="riepilogo-vers"><span class="riepilogo-valore vuoto">—</span></td>
         <td class="riepilogo-spese"><span class="riepilogo-valore vuoto">—</span></td>
         <td><span class="riepilogo-valore vuoto">—</span></td>
       `;
@@ -2198,7 +2224,7 @@ async function showRiepilogo(anno){
         <td class="riepilogo-mese-cell">${nomeMese}</td>
         <td class="riepilogo-saldo-primo">${cella(riga.saldoAttuale)}</td>
         <td class="riepilogo-saldo-ultimo">${cella(riga.differenza)}</td>
-        <td>${cella(riga.versamento)}</td>
+        <td class="riepilogo-vers">${cella(riga.versamento)}</td>
         <td class="riepilogo-spese">${cella(riga.spese)}</td>
         <td>${cella(riga.provvigioni)}</td>
       `;
@@ -2223,7 +2249,7 @@ async function showRiepilogo(anno){
     <td class="riepilogo-mese-cell">TOTALE</td>
     <td class="riepilogo-saldo-primo">${cellaTot(tot.saldoAttuale)}</td>
     <td class="riepilogo-saldo-ultimo">${cellaTot(tot.differenza)}</td>
-    <td>${cellaTot(tot.versamento)}</td>
+    <td class="riepilogo-vers">${cellaTot(tot.versamento)}</td>
     <td class="riepilogo-spese">${cellaTot(tot.spese)}</td>
     <td>${cellaTot(tot.provvigioni)}</td>
   `;

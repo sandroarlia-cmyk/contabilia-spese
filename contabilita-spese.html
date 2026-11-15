@@ -591,7 +591,7 @@
         <button class="logout-btn" id="presunte-add-col" type="button">＋ Aggiungi colonna</button>
         <button class="logout-btn" id="presunte-del-vuote" type="button">🗑 Elimina colonne vuote</button>
         <button class="logout-btn" id="presunte-del-tutte" type="button">🗑 Elimina tutte le colonne voci</button>
-        <button class="logout-btn" id="presunte-ricopia" type="button">↺ Ricopia dal Riepilogo Spese Fisse</button>
+        <button class="logout-btn" id="presunte-ricopia" type="button">↺ Annulla mie modifiche (ripristina dalla scheda principale)</button>
         <button class="logout-btn sf-export" id="presunte-export" type="button">⬇ Esporta in Excel</button>
         <button class="logout-btn" id="presunte-back" type="button">← Torna alla contabilità</button>
       </div>
@@ -1618,7 +1618,7 @@ async function completaFoglioPresunte(doc, anno){
   if(typeof doc.saldoIniziale !== 'number'){ doc.saldoIniziale = arrotonda2(await calcolaSaldoPrecedente(anno, 1)); mod = true; }
   if(doc.riempi !== false){
     const need = colonneNecessarie();
-    while(doc.voci.length < need){ doc.voci.push(''); doc.celle.forEach(r => r.push(null)); mod = true; }
+    while(doc.voci.length < need){ doc.voci.push(''); if(Array.isArray(doc.link)) doc.link.push(null); doc.celle.forEach(r => r.push(null)); mod = true; }
   }
   return mod;
 }
@@ -1630,7 +1630,7 @@ function arrotonda2(n){ return Math.round(n * 100) / 100; }
 async function leggiSpeseFisseAnno(anno){
   const mesi = [];
   for(let m=1; m<=12; m++){
-    let voci = [], provv = null;
+    let voci = [], provv = null, vers = null;
     try{
       const res = await store.get(keyFor(anno, m));
       if(res && res.value){
@@ -1638,9 +1638,11 @@ async function leggiSpeseFisseAnno(anno){
         voci = raggruppaVociMese(d.rows);
         const pv = parseFloat(d.provvigioni);
         provv = (isNaN(pv) || pv === 0) ? null : pv;
+        const vv = parseFloat(d.versamento);
+        vers = (isNaN(vv) || vv === 0) ? null : vv;
       }
     } catch(e){ /* mese vuoto */ }
-    mesi.push({ voci, provv });
+    mesi.push({ voci, provv, vers });
   }
   const colonne = [];
   mesi.forEach(ms => ms.voci.forEach(v=>{
@@ -1648,19 +1650,64 @@ async function leggiSpeseFisseAnno(anno){
   }));
   return {
     colonne: colonne.map(c => c.etichetta),
+    chiavi: colonne.map(c => c.chiave),
+    vers: mesi.map(ms => ms.vers === null ? null : arrotonda2(ms.vers)),
     celle: mesi.map(ms => colonne.map(c => { const v = ms.voci.find(x => x.chiave === c.chiave); return v ? arrotonda2(v.somma) : null; })),
     provv: mesi.map(ms => ms.provv === null ? null : arrotonda2(ms.provv))
   };
 }
 
-function nuovoFoglioDa(src, copiatoDa, saldoIniziale){
-  const nCol = Math.max(colonneNecessarie(), src.colonne.length + 6);
-  const voci = [], celle = src.celle.map(()=>[]);
-  for(let c=0; c<nCol; c++){
-    voci.push(c < src.colonne.length ? src.colonne[c] : '');
-    src.celle.forEach((riga, r)=> celle[r].push(c < src.colonne.length ? riga[c] : null));
+// Foglio vuoto: si riempie con sincronizzaDaPrincipale (la scheda principale invia, questa riceve)
+function nuovoFoglioVuoto(saldoIniziale){
+  const nCol = colonneNecessarie();
+  return { sync: true, voci: Array(nCol).fill(''), link: Array(nCol).fill(null),
+    celle: Array.from({length:12}, ()=> Array(nCol).fill(null)),
+    provv: Array(12).fill(null), vers: Array(12).fill(null), totManuale: Array(12).fill(null),
+    saldoIniziale, base: null };
+}
+
+// Sincronizzazione A SENSO UNICO: legge la scheda principale (mai la modifica).
+// Una cella segue la scheda principale finche' non la modifichi tu; se la modifichi, la tua modifica resta.
+function sincronizzaDaPrincipale(doc, src, saldoSrc){
+  const nn = v => (typeof v === 'number' && !isNaN(v)) ? v : null;
+  const uguali = (a, b) => nn(a) === nn(b);
+  const base = doc.base || { celle:{}, provv:Array(12).fill(null), vers:Array(12).fill(null), etichette:{}, saldo:null };
+  if(!Array.isArray(doc.link) || doc.link.length !== doc.voci.length) doc.link = doc.voci.map(()=> null);
+  let mod = false;
+  src.chiavi.forEach((k, j)=>{
+    let c = doc.link.indexOf(k);
+    if(c < 0){
+      c = doc.voci.findIndex((v, i)=> doc.link[i] === null && (v || '').trim() === '' && doc.celle.every(r => r[i] === null));
+      if(c < 0){ doc.voci.push(''); doc.link.push(null); doc.celle.forEach(r => r.push(null)); c = doc.voci.length - 1; }
+      doc.link[c] = k; doc.voci[c] = src.colonne[j]; mod = true;
+    } else if(doc.voci[c] === (base.etichette[k] || doc.voci[c]) && doc.voci[c] !== src.colonne[j]){
+      doc.voci[c] = src.colonne[j]; mod = true;
+    }
+    const vecchi = base.celle[k] || Array(12).fill(null);
+    for(let m=0; m<12; m++){
+      if(uguali(doc.celle[m][c], vecchi[m]) && !uguali(doc.celle[m][c], src.celle[m][j])){ doc.celle[m][c] = src.celle[m][j]; mod = true; }
+    }
+  });
+  // colonne collegate a voci sparite dalla scheda principale: le celle non toccate si svuotano
+  doc.link.forEach((k, c)=>{
+    if(k === null || src.chiavi.includes(k)) return;
+    const vecchi = base.celle[k] || Array(12).fill(null);
+    for(let m=0; m<12; m++){
+      if(uguali(doc.celle[m][c], vecchi[m]) && doc.celle[m][c] !== null){ doc.celle[m][c] = null; mod = true; }
+    }
+  });
+  for(let m=0; m<12; m++){
+    if(uguali(doc.provv[m], base.provv[m]) && !uguali(doc.provv[m], src.provv[m])){ doc.provv[m] = src.provv[m]; mod = true; }
+    if(uguali(doc.vers[m], base.vers[m]) && !uguali(doc.vers[m], src.vers[m])){ doc.vers[m] = src.vers[m]; mod = true; }
   }
-  return { voci, celle, provv: src.provv.slice(), vers: Array(12).fill(null), totManuale: Array(12).fill(null), saldoIniziale, copiatoDa };
+  if(doc.base === null || doc.base === undefined || uguali(doc.saldoIniziale, base.saldo)){
+    if(!uguali(doc.saldoIniziale, saldoSrc)){ doc.saldoIniziale = saldoSrc; mod = true; }
+  }
+  const nb = { celle:{}, provv:src.provv.slice(), vers:src.vers.slice(), etichette:{}, saldo:saldoSrc };
+  src.chiavi.forEach((k, j)=>{ nb.celle[k] = src.celle.map(r => r[j]); nb.etichette[k] = src.colonne[j]; });
+  if(JSON.stringify(nb) !== JSON.stringify(doc.base)){ mod = true; }
+  doc.base = nb;
+  return mod;
 }
 
 function nascondiPresunte(){
@@ -1689,13 +1736,14 @@ async function showPresunte(anno){
   } catch(e){ doc = null; }
 
   let nuovo = false;
-  if(!doc || !Array.isArray(doc.voci)){
-    const src = await leggiSpeseFisseAnno(anno - 1);
-    const sp = arrotonda2(await calcolaSaldoPrecedente(anno, 1));
-    doc = nuovoFoglioDa(src, anno - 1, sp);
+  const spPrinc = arrotonda2(await calcolaSaldoPrecedente(anno, 1));
+  if(!doc || !Array.isArray(doc.voci) || !doc.sync){
+    doc = nuovoFoglioVuoto(spPrinc);   // anche i vecchi fogli (copia indipendente) ripartono sincronizzati
     nuovo = true;
   }
-  const mod = await completaFoglioPresunte(doc, anno);
+  const src = await leggiSpeseFisseAnno(anno);
+  let mod = await completaFoglioPresunte(doc, anno);
+  if(sincronizzaDaPrincipale(doc, src, spPrinc)) mod = true;
   presunteDati = doc;
   presunteAnno = anno;
   disegnaPresunte();
@@ -1738,8 +1786,8 @@ function disegnaPresunte(){
 
   document.getElementById('pr-saldo-iniziale').value = formatEuro(d.saldoIniziale || 0);
   const nota = document.getElementById('presunte-nota');
-  nota.textContent = (d.copiatoDa ? `Partito come copia del Riepilogo Spese Fisse ${d.copiatoDa}. ` : '') +
-    'Ora è un foglio libero: scrivi e modifica dove vuoi. Non è collegato alle altre schede e non cambia nessun dato. I totali e i saldi si calcolano da soli. ' +
+  nota.textContent = `Si aggiorna da sola con i dati inseriti nei mesi ${presunteAnno} della scheda Contabilità Spese (collegamento a senso unico: da lì a qui, mai il contrario). ` +
+    'Puoi modificare qualsiasi casella: la tua modifica resta e NON cambia la scheda Contabilità Spese. I totali e i saldi si calcolano da soli. ' +
     'Se un mese non ha voci, puoi scrivere il totale spese a mano nella casella rosa.';
   aggiornaTotaliPresunte();
 }
@@ -1881,6 +1929,7 @@ function spostaColonnaPresunte(da, a){
   if(!d || da === a || da < 0 || a < 0 || da >= d.voci.length || a >= d.voci.length) return;
   const muovi = arr => { const x = arr.splice(da, 1)[0]; arr.splice(a, 0, x); };
   muovi(d.voci);
+  if(d.link) muovi(d.link);
   d.celle.forEach(muovi);
   disegnaPresunte();
   queuePresunte();
@@ -1962,6 +2011,7 @@ async function eliminaColonnePresunte(modo, indice){
   const set = new Set(daEliminare);
   d.voci = d.voci.filter((v, c)=> !set.has(c));
   d.celle = d.celle.map(r => r.filter((v, c)=> !set.has(c)));
+  if(d.link) d.link = d.link.filter((v, c)=> !set.has(c));
   d.riempi = false;
   disegnaPresunte();
   await salvaPresunte();
@@ -1970,6 +2020,7 @@ async function eliminaColonnePresunte(modo, indice){
 function aggiungiColonnaPresunte(){
   if(!presunteDati) return;
   presunteDati.voci.push('');
+  if(presunteDati.link) presunteDati.link.push(null);
   presunteDati.celle.forEach(r => r.push(null));
   disegnaPresunte();
   queuePresunte();
@@ -1980,14 +2031,16 @@ function aggiungiColonnaPresunte(){
 async function ricopiaPresunte(){
   if(!presunteDati || !presunteAnno) return;
   document.getElementById('conferma-titolo').textContent = 'Stai per effettuare una modifica';
-  document.getElementById('conferma-t1').textContent = `Stai per sostituire tutto il foglio Spese stimate future ${presunteAnno}:`;
-  document.getElementById('conferma-nomi').innerHTML = `Tutto quello che hai scritto qui sarà cancellato e il foglio ripartirà da una nuova copia del <b>Riepilogo Spese Fisse ${presunteAnno - 1}</b>.`;
+  document.getElementById('conferma-t1').textContent = `Stai per annullare tutte le tue modifiche al foglio Spese stimate future ${presunteAnno}:`;
+  document.getElementById('conferma-nomi').innerHTML = `Tutto quello che hai scritto qui sarà cancellato e il foglio tornerà uguale ai dati dei mesi ${presunteAnno} della scheda <b>Contabilità Spese</b>.`;
   document.getElementById('conferma-t2').textContent = 'Le altre schede non vengono modificate.';
   const ok = await chiediConferma();
   if(!ok) return;
-  const src = await leggiSpeseFisseAnno(presunteAnno - 1);
+  const src = await leggiSpeseFisseAnno(presunteAnno);
   const sp = arrotonda2(await calcolaSaldoPrecedente(presunteAnno, 1));
-  presunteDati = nuovoFoglioDa(src, presunteAnno - 1, sp);
+  presunteDati = nuovoFoglioVuoto(sp);
+  await completaFoglioPresunte(presunteDati, presunteAnno);
+  sincronizzaDaPrincipale(presunteDati, src, sp);
   disegnaPresunte();
   await salvaPresunte();
 }
